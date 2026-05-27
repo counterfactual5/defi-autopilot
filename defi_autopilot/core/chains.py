@@ -7,7 +7,7 @@ RPC URLs are loaded from environment variables at import time.
 
 import os
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict
 
 
 @dataclass

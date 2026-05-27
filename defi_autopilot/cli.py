@@ -11,7 +11,6 @@ Usage:
   defi moonwell repay  --token USDC --amount 500
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -773,6 +772,9 @@ def list_markets(ctx):
     """List available protocols and markets"""
     from defi_autopilot.protocols.aave import BASE_TOKENS_AAVE
     from defi_autopilot.protocols.oneinch import BASE_TOKENS_INCH
+    from defi_autopilot.protocols.uniswap import BASE_TOKENS_UNI
+    from defi_autopilot.protocols.morpho import BASE_MARKETS
+    from defi_autopilot.protocols.moonwell import BASE_MOONWELL
 
     table = Table(title="Available Markets")
     table.add_column("Protocol", style="cyan")

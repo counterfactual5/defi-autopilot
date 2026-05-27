@@ -10,7 +10,6 @@ No dependency on OpenClaw runtime — standalone client.
 from typing import Optional, Dict, Any
 
 import httpx
-from web3 import Web3
 
 from defi_autopilot.core.rpc import get_w3, get_chain_config
 from defi_autopilot.core.signer import get_address
@@ -157,7 +156,7 @@ class UniswapClient:
         token_out_addr = self._get_token_address(token_out)
 
         # Get quote first
-        quote = self.get_quote(token_in_addr, token_out_addr, amount_in, slippage_bps)
+        _ = self.get_quote(token_in_addr, token_out_addr, amount_in, slippage_bps)
 
         # Get swap data
         swap_params = {
