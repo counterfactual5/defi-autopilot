@@ -34,6 +34,10 @@ dev = [
 [project.scripts]
 defi = "defi_autopilot.cli:cli"
 
+[project.urls]
+Repository = "https://github.com/counterfactual5/defi-autopilot"
+Issues = "https://github.com/counterfactual5/defi-autopilot/issues"
+
 [tool.setuptools.packages.find]
 include = ["defi_autopilot*"]
 
