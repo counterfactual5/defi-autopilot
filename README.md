@@ -242,3 +242,13 @@ uv run pytest tests/ -v
 ## License
 
 MIT
+
+---
+
+If this project helped you, please ⭐ star this repo — it helps others find it!
+
+### Related Projects
+
+- **[uniswap-autopilot](https://github.com/counterfactual5/uniswap-autopilot)** — Deep Uniswap SDK with LP management, V4 support, and 13K lines of battle-tested code. If you need advanced Uniswap features beyond basic swaps, use that.
+- **[evm-wallet-scanner](https://github.com/counterfactual5/evm-wallet-scanner)** — Multi-chain wallet balance scanner, transaction history, and gas analytics.
+- **[erc20-checker](https://github.com/counterfactual5/erc20-checker)** — Scan and revoke ERC20 approvals across chains.
