@@ -123,6 +123,30 @@ quote = inch.get_quote(
 pytest tests/ -v
 ```
 
+## 🛠️ Development
+
+```bash
+git clone https://github.com/counterfactual5/defi-autopilot.git
+cd defi-autopilot
+uv pip install -e ".[dev]"
+uv run pytest tests/ -v
+```
+
+40 tests covering chain config, market params, ABI validation, client initialization, and token mappings.
+
+## 🗺️ Roadmap
+
+- [x] Morpho Blue lending operations
+- [x] Moonwell supply/borrow/repay
+- [x] Aave V3 lending + health factor
+- [x] 1inch DEX aggregation
+- [x] Multi-chain (Base, Ethereum, Arbitrum, Optimism, Polygon)
+- [ ] Compound V3 integration
+- [ ] Uniswap V3/V4 LP management
+- [ ] Strategy automation (auto-compound, yield optimization)
+- [ ] Position monitoring & alerting
+- [ ] WebSocket support for real-time data
+
 ## Security
 
 - Private keys loaded from environment variables (never hardcoded)
