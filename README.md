@@ -25,7 +25,10 @@ defi-autopilot/
 │   │   ├── moonwell/      # Moonwell (Compound V2 fork)
 │   │   ├── aave/          # Aave V3 (lending)
 │   │   ├── uniswap/       # Uniswap V3 (DEX)
-│   │   └── oneinch/       # 1inch (DEX aggregator)
+│   │   ├── oneinch/       # 1inch (DEX aggregator)
+│   │   ├── lido/          # Lido (liquid staking)
+│   │   ├── compound/      # Compound V3 (lending)
+│   │   └── curve/         # Curve Finance (DEX)
 │   └── cli.py             # Click CLI entry point
 └── tests/
 ```
@@ -39,6 +42,9 @@ defi-autopilot/
 | **Aave V3** | Lending | Base, Ethereum, Arbitrum, Optimism, Polygon | supply, withdraw, borrow, repay, collateral toggle |
 | **Uniswap V3** | DEX | Base, Ethereum, Arbitrum, Optimism, Polygon, Unichain | quote, swap, price |
 | **1inch** | DEX Aggregator | Base, Ethereum, Arbitrum, Optimism, Polygon | quote, swap |
+| **Lido** | Liquid Staking | Ethereum, Base, Arbitrum, Optimism, Polygon | stake ETH, wrap/unwrap stETH/wstETH |
+| **Compound V3** | Lending | Ethereum, Base, Arbitrum, Polygon | supply, withdraw, supplyCollateral, borrow, repay |
+| **Curve** | Stablecoin DEX | Ethereum, Base, Arbitrum, Optimism | swap, add/remove liquidity, quote |
 
 ## Quick Start
 

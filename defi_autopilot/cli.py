@@ -520,6 +520,250 @@ def inch_swap(ctx, src, dst, amount, slippage):
 
 
 # ============================================================
+# Lido Commands
+# ============================================================
+
+@cli.group()
+def lido():
+    """Lido liquid staking"""
+    pass
+
+
+@lido.command("stake")
+@click.option("--amount", "-n", required=True, type=int, help="ETH amount in wei")
+@click.pass_context
+def lido_stake(ctx, amount):
+    """Stake ETH to receive stETH (Ethereum only)"""
+    from defi_autopilot.protocols.lido import LidoClient
+
+    chain_id = ctx.obj["chain_id"]
+    client = LidoClient(chain_id)
+
+    if not client.supports_native_staking:
+        console.print("[red]Native staking only available on Ethereum mainnet[/red]")
+        sys.exit(1)
+
+    result = client.stake(amount)
+    _print_tx_result(result)
+
+
+@lido.command("wrap")
+@click.option("--amount", "-n", required=True, type=int, help="stETH amount in wei")
+@click.pass_context
+def lido_wrap(ctx, amount):
+    """Wrap stETH to wstETH"""
+    from defi_autopilot.protocols.lido import LidoClient
+
+    chain_id = ctx.obj["chain_id"]
+    client = LidoClient(chain_id)
+    result = client.wrap(amount)
+    _print_tx_result(result)
+
+
+@lido.command("unwrap")
+@click.option("--amount", "-n", required=True, type=int, help="wstETH amount in wei")
+@click.pass_context
+def lido_unwrap(ctx, amount):
+    """Unwrap wstETH to stETH"""
+    from defi_autopilot.protocols.lido import LidoClient
+
+    chain_id = ctx.obj["chain_id"]
+    client = LidoClient(chain_id)
+    result = client.unwrap(amount)
+    _print_tx_result(result)
+
+
+@lido.command("balance")
+@click.option("--user", "-u", type=str, default=None, help="Address to query")
+@click.pass_context
+def lido_balance(ctx, user):
+    """Query stETH/wstETH balance"""
+    from defi_autopilot.protocols.lido import LidoClient
+    from defi_autopilot.core.signer import get_address
+
+    chain_id = ctx.obj["chain_id"]
+    client = LidoClient(chain_id)
+    user = user or get_address()
+
+    table = Table(title=f"Lido Balance — Chain {chain_id}")
+    table.add_column("Token", style="cyan")
+    table.add_column("Balance", style="green")
+
+    if client.supports_native_staking:
+        try:
+            steth = client.get_steth_balance(user)
+            table.add_row("stETH", str(steth))
+        except Exception:
+            pass
+
+    wsteth = client.get_wsteth_balance(user)
+    rate = client.get_steth_per_wsteth()
+    table.add_row("wstETH", str(wsteth))
+    table.add_row("stETH/wstETH rate", str(rate))
+
+    console.print(table)
+
+
+# ============================================================
+# Compound V3 Commands
+# ============================================================
+
+@cli.group()
+def compound():
+    """Compound V3 lending protocol"""
+    pass
+
+
+@compound.command("supply")
+@click.option("--market", "-m", default="USDC", help="Market name (default USDC)")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.pass_context
+def compound_supply(ctx, market, amount):
+    """Supply base asset to Compound V3"""
+    from defi_autopilot.protocols.compound import CompoundV3Client
+
+    chain_id = ctx.obj["chain_id"]
+    client = CompoundV3Client(chain_id, market)
+    result = client.supply(amount)
+    _print_tx_result(result)
+
+
+@compound.command("supply-collateral")
+@click.option("--market", "-m", default="USDC", help="Market name")
+@click.option("--asset", "-a", required=True, help="Collateral asset name (e.g. WETH)")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.pass_context
+def compound_supply_collateral(ctx, market, asset, amount):
+    """Supply collateral to Compound V3"""
+    from defi_autopilot.protocols.compound import CompoundV3Client
+
+    chain_id = ctx.obj["chain_id"]
+    client = CompoundV3Client(chain_id, market)
+    result = client.supply_collateral(asset, amount)
+    _print_tx_result(result)
+
+
+@compound.command("borrow")
+@click.option("--market", "-m", default="USDC", help="Market name")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.pass_context
+def compound_borrow(ctx, market, amount):
+    """Borrow base asset from Compound V3"""
+    from defi_autopilot.protocols.compound import CompoundV3Client
+
+    chain_id = ctx.obj["chain_id"]
+    client = CompoundV3Client(chain_id, market)
+    result = client.borrow(amount)
+    _print_tx_result(result)
+
+
+@compound.command("repay")
+@click.option("--market", "-m", default="USDC", help="Market name")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.pass_context
+def compound_repay(ctx, market, amount):
+    """Repay borrowed asset to Compound V3"""
+    from defi_autopilot.protocols.compound import CompoundV3Client
+
+    chain_id = ctx.obj["chain_id"]
+    client = CompoundV3Client(chain_id, market)
+    result = client.repay(amount)
+    _print_tx_result(result)
+
+
+@compound.command("position")
+@click.option("--market", "-m", default="USDC", help="Market name")
+@click.option("--user", "-u", type=str, default=None, help="Address to query")
+@click.pass_context
+def compound_position(ctx, market, user):
+    """Query Compound V3 position"""
+    from defi_autopilot.protocols.compound import CompoundV3Client
+    from defi_autopilot.core.signer import get_address
+
+    chain_id = ctx.obj["chain_id"]
+    client = CompoundV3Client(chain_id, market)
+    user = user or get_address()
+
+    supply_bal = client.get_supply_balance(user)
+    borrow_bal = client.get_borrow_balance(user)
+
+    table = Table(title=f"Compound V3 — {market} Market")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+    table.add_row("Supply", str(supply_bal))
+    table.add_row("Borrow", str(borrow_bal))
+
+    for coll_name in client._market["collaterals"]:
+        coll_bal = client.get_collateral_balance(user, coll_name)
+        table.add_row(f"Collateral ({coll_name})", str(coll_bal))
+
+    console.print(table)
+
+
+# ============================================================
+# Curve Commands
+# ============================================================
+
+@cli.group()
+def curve():
+    """Curve Finance DEX"""
+    pass
+
+
+@curve.command("quote")
+@click.option("--pool", "-p", required=True, help="Pool name")
+@click.option("--in", "-i", "token_in", required=True, help="Input token address")
+@click.option("--out", "-o", "token_out", required=True, help="Output token address")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.pass_context
+def curve_quote(ctx, pool, token_in, token_out, amount):
+    """Get swap quote from Curve pool"""
+    from defi_autopilot.protocols.curve import CurveClient
+
+    chain_id = ctx.obj["chain_id"]
+    client = CurveClient(chain_id, pool)
+    dy = client.get_dy(token_in, token_out, amount)
+    console.print(f"[green]Quote:[/green] {dy}")
+
+
+@curve.command("swap")
+@click.option("--pool", "-p", required=True, help="Pool name")
+@click.option("--in", "-i", "token_in", required=True, help="Input token address")
+@click.option("--out", "-o", "token_out", required=True, help="Output token address")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.pass_context
+def curve_swap(ctx, pool, token_in, token_out, amount):
+    """Swap tokens on Curve"""
+    from defi_autopilot.protocols.curve import CurveClient
+
+    chain_id = ctx.obj["chain_id"]
+    client = CurveClient(chain_id, pool)
+    result = client.swap(token_in, token_out, amount)
+    _print_tx_result(result)
+
+
+@curve.command("pools")
+@click.pass_context
+def curve_pools(ctx):
+    """List available Curve pools"""
+    from defi_autopilot.protocols.curve import CURVE_POOLS
+
+    chain_id = ctx.obj["chain_id"]
+    pools = CURVE_POOLS.get(chain_id, {})
+
+    table = Table(title=f"Curve Pools — Chain {chain_id}")
+    table.add_column("Pool", style="cyan")
+    table.add_column("Address", style="green")
+    table.add_column("Coins", style="yellow")
+
+    for name, info in pools.items():
+        coins = ", ".join(info["coins"][:3])
+        table.add_row(name, info["address"][:12] + "...", coins)
+
+    console.print(table)
+
+
+# ============================================================
 # Utility Commands
 # ============================================================
 
@@ -536,7 +780,9 @@ def list_markets(ctx):
     table.add_column("Type", style="yellow")
     table.add_column("Chain", style="magenta")
 
-    from defi_autopilot.protocols.uniswap import BASE_TOKENS_UNI
+    from defi_autopilot.protocols.compound import COMET_MARKETS
+    from defi_autopilot.protocols.curve import CURVE_POOLS
+    from defi_autopilot.protocols.lido import LIDO_ADDRESSES
 
     for name in sorted(BASE_TOKENS_UNI.keys()):
         table.add_row("Uniswap V3", name, "DEX", "Multi-chain")
@@ -552,6 +798,17 @@ def list_markets(ctx):
 
     for name in sorted(BASE_TOKENS_INCH.keys()):
         table.add_row("1inch", name, "DEX Aggregator", "Multi-chain")
+
+    for chain_id, markets in COMET_MARKETS.items():
+        for name in markets:
+            table.add_row("Compound V3", name, "Lending", f"Chain {chain_id}")
+
+    for chain_id, pools in CURVE_POOLS.items():
+        for name in pools:
+            table.add_row("Curve", name, "DEX", f"Chain {chain_id}")
+
+    for chain_id in LIDO_ADDRESSES:
+        table.add_row("Lido", "stETH/wstETH", "Liquid Staking", f"Chain {chain_id}")
 
     console.print(table)
 
