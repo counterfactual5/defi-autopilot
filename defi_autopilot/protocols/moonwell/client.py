@@ -11,9 +11,9 @@ from typing import Optional, Dict, Any
 
 from web3 import Web3
 
-from ..core.rpc import get_w3, get_chain_config
-from ..core.signer import get_signer, get_address
-from ..core.tx import build_and_send_tx, check_allowance, approve_token
+from defi_autopilot.core.rpc import get_w3, get_chain_config
+from defi_autopilot.core.signer import get_signer, get_address
+from defi_autopilot.core.tx import build_and_send_tx, check_allowance, approve_token
 
 
 # Compound V2 标准 cToken ABI（精简版）
