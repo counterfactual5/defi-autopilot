@@ -9,12 +9,12 @@ Key contracts per chain:
   - PoolAddressesProvider: registry for pool addresses
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 from web3 import Web3
 
 from defi_autopilot.core.rpc import get_w3, get_chain_config
-from defi_autopilot.core.signer import get_signer, get_address
+from defi_autopilot.core.signer import get_address
 from defi_autopilot.core.tx import build_and_send_tx, check_allowance, approve_token
 
 
@@ -188,10 +188,9 @@ class AaveV3Client:
         on_behalf = on_behalf or signer_addr
 
         # Check and handle approval (approve aToken)
-        reserve_data = self.pool.functions.getReserveData(
+        self.pool.functions.getReserveData(
             Web3.to_checksum_address(asset)
         ).call()
-        a_token = reserve_data[8]  # aTokenAddress
 
         allowance = check_allowance(self.chain_id, asset, signer_addr, self.pool_address)
         if allowance < amount:
