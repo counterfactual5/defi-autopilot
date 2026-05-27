@@ -1,18 +1,18 @@
 """
-Morpho Blue 协议交互模块
+Morpho Blue protocol interaction module
 
-Morpho Blue 是一个不可变的借贷协议，核心合约地址在所有链上相同：
+Morpho Blue is an immutable lending protocol; the core contract address is the same across all chains:
 0xBBBBBBBBB9cC5e90e3b3af64bdAF62C37EEFFcBb
 
-核心操作：
-- supply(loanToken)        供给资产赚取利息
-- supplyCollateral(...)    存入抵押品
-- borrow(...)              借出资产
-- repay(...)               归还借款
-- withdraw(loanToken)      取出供给的资产
-- withdrawCollateral(...)  取出抵押品
+Core operations:
+- supply(loanToken)        Supply assets to earn interest
+- supplyCollateral(...)    Deposit collateral
+- borrow(...)              Borrow assets
+- repay(...)               Repay borrowed assets
+- withdraw(loanToken)      Withdraw supplied assets
+- withdrawCollateral(...)  Withdraw collateral
 
-每个市场由 MarketParams 唯一确定：
+Each market is uniquely identified by MarketParams:
   { loanToken, collateralToken, oracle, irm, lltv }
 """
 
@@ -25,7 +25,7 @@ from defi_autopilot.core.rpc import get_w3, get_chain_config
 from defi_autopilot.core.signer import get_signer, get_address
 from defi_autopilot.core.tx import build_and_send_tx, check_allowance, approve_token
 
-# Morpho Blue 核心合约 ABI（精简版，覆盖所有操作）
+# Morpho Blue core contract ABI (abbreviated, covers all operations)
 MORPHO_BLUE_ABI = [
     # supply(loanToken amount shares onBehalf hooksData)
     {
@@ -180,22 +180,22 @@ MORPHO_BLUE_ABI = [
     },
 ]
 
-# 零地址（Morpho 用 bytes32(0) 表示无 hooks）
+# Zero address (Morpho uses bytes32(0) to indicate no hooks)
 EMPTY_HOOKS = b"\x00" * 32
 
 
 @dataclass
 class MarketParams:
-    """Morpho 市场参数"""
+    """Morpho market parameters"""
     loan_token: str
     collateral_token: str
     oracle: str
     irm: str
-    lltv: int  # 以 1e18 为基数（如 77% = 770000000000000000）
+    lltv: int  # Base 1e18 (e.g. 77% = 770000000000000000)
 
     @property
     def market_id(self) -> bytes:
-        """计算市场 ID（keccak256 of encoded params）"""
+        """Compute market ID (keccak256 of encoded params)"""
         from eth_abi import encode
         encoded = encode(
             ["address", "address", "address", "address", "uint256"],
@@ -220,10 +220,10 @@ class MarketParams:
 
 
 # ============================================================
-# 预置 Base 链市场参数
+# Preset Base chain market parameters
 # ============================================================
 
-# Morpho 官方 IRM 地址
+# Morpho official IRM addresses
 MORPHO_IRM = {
     8453: {
         "adaptive_curve": "0x870aAcb0EB19c95DaE3Fb3e4047a8D7F28461141",
@@ -233,12 +233,12 @@ MORPHO_IRM = {
     },
 }
 
-# Base 链常用 Oracle 地址
+# Base chain commonly used Oracle addresses
 BASE_ORACLES = {
     "weth_usdc": "0x5c9e10a30610EfE425697e3b9145569cAcdA7A3f",
 }
 
-# Base 链常用 Token 地址
+# Base chain commonly used Token addresses
 BASE_TOKENS = {
     "USDC": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     "WETH": "0x4200000000000000000000000000000000000006",
@@ -247,7 +247,7 @@ BASE_TOKENS = {
     "wstETH": "0xc1CBa3fCea347f7fDCaB627dA9aF9e97D0e01e7D",
 }
 
-# 预置 Base 链 Morpho 市场
+# Preset Base chain Morpho markets
 BASE_MARKETS = {
     "USDC-WETH-77": MarketParams(
         loan_token=BASE_TOKENS["USDC"],
@@ -274,7 +274,7 @@ BASE_MARKETS = {
 
 
 class MorphoClient:
-    """Morpho Blue 协议客户端"""
+    """Morpho Blue protocol client"""
 
     def __init__(self, chain_id: int = 8453):
         self.chain_id = chain_id
@@ -286,7 +286,7 @@ class MorphoClient:
         )
         self._morpho_address = self.config.morpho_blue
 
-    # ---- 供给 ----
+    # ---- Supply ----
 
     def supply(
         self,
@@ -296,11 +296,11 @@ class MorphoClient:
         private_key: Optional[str] = None,
         skip_approval: bool = False,
     ) -> Dict[str, Any]:
-        """供给资产到市场（赚取利息）"""
+        """Supply assets to the market (earn interest)"""
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
 
-        # 检查并处理 approval
+        # Check and handle approval
         if not skip_approval:
             allowance = check_allowance(
                 self.chain_id, market.loan_token, signer_addr, self._morpho_address
@@ -322,7 +322,7 @@ class MorphoClient:
             private_key=private_key,
         )
 
-    # ---- 存入抵押品 ----
+    # ---- Deposit Collateral ----
 
     def supply_collateral(
         self,
@@ -331,11 +331,11 @@ class MorphoClient:
         on_behalf: Optional[str] = None,
         private_key: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """存入抵押品"""
+        """Deposit collateral"""
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
 
-        # 检查 approval
+        # Check approval
         allowance = check_allowance(
             self.chain_id, market.collateral_token, signer_addr, self._morpho_address
         )
@@ -356,7 +356,7 @@ class MorphoClient:
             private_key=private_key,
         )
 
-    # ---- 借款 ----
+    # ---- Borrow ----
 
     def borrow(
         self,
@@ -366,7 +366,7 @@ class MorphoClient:
         receiver: Optional[str] = None,
         private_key: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """从市场借出资产"""
+        """Borrow assets from the market"""
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
         receiver = receiver or signer_addr
@@ -376,7 +376,7 @@ class MorphoClient:
             [
                 market.to_tuple(),
                 amount,  # assets
-                0,       # shares（以 amount 为准）
+                0,       # shares (use amount as reference)
                 Web3.to_checksum_address(on_behalf),
                 Web3.to_checksum_address(receiver),
                 EMPTY_HOOKS,
@@ -389,7 +389,7 @@ class MorphoClient:
             private_key=private_key,
         )
 
-    # ---- 还款 ----
+    # ---- Repay ----
 
     def repay(
         self,
@@ -400,15 +400,15 @@ class MorphoClient:
         private_key: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        归还借款。
-        amount=0 且 shares>0 → 按份额还全款
-        amount>0 且 shares=0 → 按指定金额还
+        Repay borrowed assets.
+        amount=0 and shares>0 → repay by shares (full amount)
+        amount>0 and shares=0 → repay specified amount
         """
-        assert amount > 0 or shares > 0, "amount 和 shares 至少指定一个"
+        assert amount > 0 or shares > 0, "At least one of amount or shares must be specified"
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
 
-        # 检查 approval（需要授权 loanToken）
+        # Check approval (need to authorize loanToken)
         allowance = check_allowance(
             self.chain_id, market.loan_token, signer_addr, self._morpho_address
         )
@@ -436,7 +436,7 @@ class MorphoClient:
             private_key=private_key,
         )
 
-    # ---- 取出供给 ----
+    # ---- Withdraw Supply ----
 
     def withdraw(
         self,
@@ -447,8 +447,8 @@ class MorphoClient:
         receiver: Optional[str] = None,
         private_key: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """取出供给的资产"""
-        assert amount > 0 or shares > 0, "amount 和 shares 至少指定一个"
+        """Withdraw supplied assets"""
+        assert amount > 0 or shares > 0, "At least one of amount or shares must be specified"
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
         receiver = receiver or signer_addr
@@ -471,7 +471,7 @@ class MorphoClient:
             private_key=private_key,
         )
 
-    # ---- 取出抵押品 ----
+    # ---- Withdraw Collateral ----
 
     def withdraw_collateral(
         self,
@@ -481,7 +481,7 @@ class MorphoClient:
         receiver: Optional[str] = None,
         private_key: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """取出抵押品"""
+        """Withdraw collateral"""
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
         receiver = receiver or signer_addr
@@ -503,18 +503,18 @@ class MorphoClient:
             private_key=private_key,
         )
 
-    # ---- 查询 ----
+    # ---- Queries ----
 
     def get_position(
         self, market: MarketParams, user: str
     ) -> Tuple[int, int, int]:
-        """查询用户头寸 → (supplyShares, borrowShares, collateral)"""
+        """Query user position → (supplyShares, borrowShares, collateral)"""
         return self.contract.functions.position(
             market.market_id, Web3.to_checksum_address(user)
         ).call()
 
     def get_market_info(self, market: MarketParams) -> Dict[str, Any]:
-        """查询市场状态"""
+        """Query market state"""
         result = self.contract.functions.market(market.market_id).call()
         return {
             "total_supply_assets": result[0],

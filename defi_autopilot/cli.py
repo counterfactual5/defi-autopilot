@@ -1,7 +1,7 @@
 """
-defi-autopilot CLI 入口
+defi-autopilot CLI entry point
 
-用法:
+Usage:
   defi morpho supply   --market USDC-WETH-77 --amount 1000
   defi morpho borrow   --market USDC-WETH-77 --amount 500
   defi morpho repay    --market USDC-WETH-77 --amount 500
@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
-# 加载 .env
+# Load .env
 _env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(_env_path)
 
@@ -28,37 +28,37 @@ console = Console()
 
 
 # ============================================================
-# 主命令组
+# Main command group
 # ============================================================
 
 @click.group()
-@click.option("--chain", "-c", default=8453, type=int, help="链 ID（默认 8453 = Base）")
-@click.option("--dry-run", is_flag=True, help="只模拟，不发送交易")
+@click.option("--chain", "-c", default=8453, type=int, help="Chain ID (default 8453 = Base)")
+@click.option("--dry-run", is_flag=True, help="Simulate only, do not send transaction")
 @click.pass_context
 def cli(ctx, chain, dry_run):
-    """🚀 DeFi Autopilot — 多链多协议 DeFi 自动化工具"""
+    """🚀 DeFi Autopilot — multi-chain multi-protocol DeFi automation tool"""
     ctx.ensure_object(dict)
     ctx.obj["chain_id"] = chain
     ctx.obj["dry_run"] = dry_run
 
 
 # ============================================================
-# Morpho 命令
+# Morpho commands
 # ============================================================
 
 @cli.group()
 def morpho():
-    """Morpho Blue 借贷协议"""
+    """Morpho Blue lending protocol"""
     pass
 
 
 @morpho.command("supply")
-@click.option("--market", "-m", required=True, help="市场名称（如 USDC-WETH-77）或 market_id")
-@click.option("--amount", "-a", required=True, type=int, help="供给数量（wei）")
-@click.option("--on-behalf", type=str, default=None, help="代为供给的地址")
+@click.option("--market", "-m", required=True, help="Market name (e.g. USDC-WETH-77) or market_id")
+@click.option("--amount", "-a", required=True, type=int, help="Supply amount (wei)")
+@click.option("--on-behalf", type=str, default=None, help="Address to supply on behalf of")
 @click.pass_context
 def morpho_supply(ctx, market, amount, on_behalf):
-    """供给资产到 Morpho 市场"""
+    """Supply assets to a Morpho market"""
     from defi_autopilot.protocols.morpho import MorphoClient, BASE_MARKETS
 
     chain_id = ctx.obj["chain_id"]
@@ -66,16 +66,16 @@ def morpho_supply(ctx, market, amount, on_behalf):
 
     mp = BASE_MARKETS.get(market)
     if mp is None:
-        console.print(f"[red]未知市场: {market}[/red]")
-        console.print(f"可用市场: {', '.join(BASE_MARKETS.keys())}")
+        console.print(f"[red]Unknown market: {market}[/red]")
+        console.print(f"Available markets: {', '.join(BASE_MARKETS.keys())}")
         sys.exit(1)
 
-    console.print(f"[cyan]供给 {amount} 到 {market} 市场[/cyan]")
+    console.print(f"[cyan]Supplying {amount} to {market} market[/cyan]")
 
     if ctx.obj["dry_run"]:
-        console.print("[yellow]DRY RUN — 不发送交易[/yellow]")
+        console.print("[yellow]DRY RUN — no transaction sent[/yellow]")
         info = client.get_market_info(mp)
-        console.print(f"市场利用率: {info['utilization']:.2%}")
+        console.print(f"Market utilization: {info['utilization']:.2%}")
         return
 
     result = client.supply(mp, amount, on_behalf=on_behalf)
@@ -83,11 +83,11 @@ def morpho_supply(ctx, market, amount, on_behalf):
 
 
 @morpho.command("supply-collateral")
-@click.option("--market", "-m", required=True, help="市场名称")
-@click.option("--amount", "-a", required=True, type=int, help="抵押品数量（wei）")
+@click.option("--market", "-m", required=True, help="Market name")
+@click.option("--amount", "-a", required=True, type=int, help="Collateral amount (wei)")
 @click.pass_context
 def morpho_supply_collateral(ctx, market, amount):
-    """存入抵押品"""
+    """Deposit collateral"""
     from defi_autopilot.protocols.morpho import MorphoClient, BASE_MARKETS
 
     chain_id = ctx.obj["chain_id"]
@@ -95,7 +95,7 @@ def morpho_supply_collateral(ctx, market, amount):
 
     mp = BASE_MARKETS.get(market)
     if mp is None:
-        console.print(f"[red]未知市场: {market}[/red]")
+        console.print(f"[red]Unknown market: {market}[/red]")
         sys.exit(1)
 
     result = client.supply_collateral(mp, amount)
@@ -103,11 +103,11 @@ def morpho_supply_collateral(ctx, market, amount):
 
 
 @morpho.command("borrow")
-@click.option("--market", "-m", required=True, help="市场名称")
-@click.option("--amount", "-a", required=True, type=int, help="借出数量（wei）")
+@click.option("--market", "-m", required=True, help="Market name")
+@click.option("--amount", "-a", required=True, type=int, help="Borrow amount (wei)")
 @click.pass_context
 def morpho_borrow(ctx, market, amount):
-    """从 Morpho 市场借款"""
+    """Borrow from a Morpho market"""
     from defi_autopilot.protocols.morpho import MorphoClient, BASE_MARKETS
 
     chain_id = ctx.obj["chain_id"]
@@ -115,7 +115,7 @@ def morpho_borrow(ctx, market, amount):
 
     mp = BASE_MARKETS.get(market)
     if mp is None:
-        console.print(f"[red]未知市场: {market}[/red]")
+        console.print(f"[red]Unknown market: {market}[/red]")
         sys.exit(1)
 
     result = client.borrow(mp, amount)
@@ -123,12 +123,12 @@ def morpho_borrow(ctx, market, amount):
 
 
 @morpho.command("repay")
-@click.option("--market", "-m", required=True, help="市场名称")
-@click.option("--amount", "-a", type=int, default=0, help="还款数量（wei）")
-@click.option("--shares", "-s", type=int, default=0, help="还款份额")
+@click.option("--market", "-m", required=True, help="Market name")
+@click.option("--amount", "-a", type=int, default=0, help="Repay amount (wei)")
+@click.option("--shares", "-s", type=int, default=0, help="Repay shares")
 @click.pass_context
 def morpho_repay(ctx, market, amount, shares):
-    """归还 Morpho 借款"""
+    """Repay a Morpho loan"""
     from defi_autopilot.protocols.morpho import MorphoClient, BASE_MARKETS
 
     chain_id = ctx.obj["chain_id"]
@@ -136,7 +136,7 @@ def morpho_repay(ctx, market, amount, shares):
 
     mp = BASE_MARKETS.get(market)
     if mp is None:
-        console.print(f"[red]未知市场: {market}[/red]")
+        console.print(f"[red]Unknown market: {market}[/red]")
         sys.exit(1)
 
     result = client.repay(mp, amount=amount, shares=shares)
@@ -144,11 +144,11 @@ def morpho_repay(ctx, market, amount, shares):
 
 
 @morpho.command("withdraw")
-@click.option("--market", "-m", required=True, help="市场名称")
-@click.option("--amount", "-a", type=int, default=0, help="取出数量（wei）")
+@click.option("--market", "-m", required=True, help="Market name")
+@click.option("--amount", "-a", type=int, default=0, help="Withdraw amount (wei)")
 @click.pass_context
 def morpho_withdraw(ctx, market, amount):
-    """取出供给的资产"""
+    """Withdraw supplied assets"""
     from defi_autopilot.protocols.morpho import MorphoClient, BASE_MARKETS
 
     chain_id = ctx.obj["chain_id"]
@@ -156,7 +156,7 @@ def morpho_withdraw(ctx, market, amount):
 
     mp = BASE_MARKETS.get(market)
     if mp is None:
-        console.print(f"[red]未知市场: {market}[/red]")
+        console.print(f"[red]Unknown market: {market}[/red]")
         sys.exit(1)
 
     result = client.withdraw(mp, amount=amount)
@@ -164,11 +164,11 @@ def morpho_withdraw(ctx, market, amount):
 
 
 @morpho.command("position")
-@click.option("--market", "-m", required=True, help="市场名称")
-@click.option("--user", "-u", type=str, default=None, help="查询地址")
+@click.option("--market", "-m", required=True, help="Market name")
+@click.option("--user", "-u", type=str, default=None, help="Address to query")
 @click.pass_context
 def morpho_position(ctx, market, user):
-    """查询 Morpho 头寸"""
+    """Query Morpho position"""
     from defi_autopilot.protocols.morpho import MorphoClient, BASE_MARKETS
     from defi_autopilot.core.signer import get_address
 
@@ -177,44 +177,44 @@ def morpho_position(ctx, market, user):
 
     mp = BASE_MARKETS.get(market)
     if mp is None:
-        console.print(f"[red]未知市场: {market}[/red]")
+        console.print(f"[red]Unknown market: {market}[/red]")
         sys.exit(1)
 
     user = user or get_address()
     supply_shares, borrow_shares, collateral = client.get_position(mp, user)
     info = client.get_market_info(mp)
 
-    table = Table(title=f"Morpho 头寸 — {market}")
-    table.add_column("指标", style="cyan")
-    table.add_column("值", style="green")
-    table.add_row("供给份额", str(supply_shares))
-    table.add_row("借款份额", str(borrow_shares))
-    table.add_row("抵押品", str(collateral))
+    table = Table(title=f"Morpho Position — {market}")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+    table.add_row("Supply Shares", str(supply_shares))
+    table.add_row("Borrow Shares", str(borrow_shares))
+    table.add_row("Collateral", str(collateral))
     table.add_row("—", "—")
-    table.add_row("市场总供给", str(info["total_supply_assets"]))
-    table.add_row("市场总借款", str(info["total_borrow_assets"]))
-    table.add_row("利用率", f"{info['utilization']:.2%}")
+    table.add_row("Total Supply", str(info["total_supply_assets"]))
+    table.add_row("Total Borrow", str(info["total_borrow_assets"]))
+    table.add_row("Utilization", f"{info['utilization']:.2%}")
 
     console.print(table)
 
 
 # ============================================================
-# Moonwell 命令
+# Moonwell commands
 # ============================================================
 
 @cli.group()
 def moonwell():
-    """Moonwell 借贷协议（Compound V2）"""
+    """Moonwell lending protocol (Compound V2)"""
     pass
 
 
 @moonwell.command("supply")
-@click.option("--token", "-t", required=True, help="代币名称（如 USDC, WETH）")
-@click.option("--amount", "-a", required=True, type=int, help="供给数量（wei）")
-@click.option("--enter-market/--no-enter-market", default=True, help="是否进入市场")
+@click.option("--token", "-t", required=True, help="Token name (e.g. USDC, WETH)")
+@click.option("--amount", "-a", required=True, type=int, help="Supply amount (wei)")
+@click.option("--enter-market/--no-enter-market", default=True, help="Whether to enter market")
 @click.pass_context
 def moonwell_supply(ctx, token, amount, enter_market):
-    """供给资产到 Moonwell 市场"""
+    """Supply assets to a Moonwell market"""
     from defi_autopilot.protocols.moonwell import MoonwellClient, BASE_MOONWELL
 
     chain_id = ctx.obj["chain_id"]
@@ -222,8 +222,8 @@ def moonwell_supply(ctx, token, amount, enter_market):
 
     token_info = BASE_MOONWELL["tokens"].get(token.upper())
     if token_info is None:
-        console.print(f"[red]未知代币: {token}[/red]")
-        console.print(f"可用: {', '.join(BASE_MOONWELL['tokens'].keys())}")
+        console.print(f"[red]Unknown token: {token}[/red]")
+        console.print(f"Available: {', '.join(BASE_MOONWELL['tokens'].keys())}")
         sys.exit(1)
 
     result = client.supply(
@@ -234,11 +234,11 @@ def moonwell_supply(ctx, token, amount, enter_market):
 
 
 @moonwell.command("borrow")
-@click.option("--token", "-t", required=True, help="代币名称")
-@click.option("--amount", "-a", required=True, type=int, help="借出数量（wei）")
+@click.option("--token", "-t", required=True, help="Token name")
+@click.option("--amount", "-a", required=True, type=int, help="Borrow amount (wei)")
 @click.pass_context
 def moonwell_borrow(ctx, token, amount):
-    """从 Moonwell 市场借款"""
+    """Borrow from a Moonwell market"""
     from defi_autopilot.protocols.moonwell import MoonwellClient, BASE_MOONWELL
 
     chain_id = ctx.obj["chain_id"]
@@ -246,7 +246,7 @@ def moonwell_borrow(ctx, token, amount):
 
     token_info = BASE_MOONWELL["tokens"].get(token.upper())
     if token_info is None:
-        console.print(f"[red]未知代币: {token}[/red]")
+        console.print(f"[red]Unknown token: {token}[/red]")
         sys.exit(1)
 
     result = client.borrow(token_info["cToken"], amount)
@@ -254,11 +254,11 @@ def moonwell_borrow(ctx, token, amount):
 
 
 @moonwell.command("repay")
-@click.option("--token", "-t", required=True, help="代币名称")
-@click.option("--amount", "-a", required=True, type=int, help="还款数量（wei）")
+@click.option("--token", "-t", required=True, help="Token name")
+@click.option("--amount", "-a", required=True, type=int, help="Repay amount (wei)")
 @click.pass_context
 def moonwell_repay(ctx, token, amount):
-    """归还 Moonwell 借款"""
+    """Repay a Moonwell loan"""
     from defi_autopilot.protocols.moonwell import MoonwellClient, BASE_MOONWELL
 
     chain_id = ctx.obj["chain_id"]
@@ -266,7 +266,7 @@ def moonwell_repay(ctx, token, amount):
 
     token_info = BASE_MOONWELL["tokens"].get(token.upper())
     if token_info is None:
-        console.print(f"[red]未知代币: {token}[/red]")
+        console.print(f"[red]Unknown token: {token}[/red]")
         sys.exit(1)
 
     result = client.repay(token_info["cToken"], amount)
@@ -274,11 +274,11 @@ def moonwell_repay(ctx, token, amount):
 
 
 @moonwell.command("position")
-@click.option("--token", "-t", required=True, help="代币名称")
-@click.option("--user", "-u", type=str, default=None, help="查询地址")
+@click.option("--token", "-t", required=True, help="Token name")
+@click.option("--user", "-u", type=str, default=None, help="Address to query")
 @click.pass_context
 def moonwell_position(ctx, token, user):
-    """查询 Moonwell 头寸"""
+    """Query Moonwell position"""
     from defi_autopilot.protocols.moonwell import MoonwellClient, BASE_MOONWELL
     from defi_autopilot.core.signer import get_address
 
@@ -287,7 +287,7 @@ def moonwell_position(ctx, token, user):
 
     token_info = BASE_MOONWELL["tokens"].get(token.upper())
     if token_info is None:
-        console.print(f"[red]未知代币: {token}[/red]")
+        console.print(f"[red]Unknown token: {token}[/red]")
         sys.exit(1)
 
     user = user or get_address()
@@ -295,52 +295,212 @@ def moonwell_position(ctx, token, user):
     borrow_bal = client.get_borrow_balance(token_info["cToken"], user)
     liquidity = client.get_account_liquidity(user)
 
-    table = Table(title=f"Moonwell 头寸 — {token}")
-    table.add_column("指标", style="cyan")
-    table.add_column("值", style="green")
-    table.add_row("供给余额 (cToken)", str(supply_bal))
-    table.add_row("借款余额", str(borrow_bal))
-    table.add_row("账户流动性", str(liquidity["liquidity"]))
-    table.add_row("账户短缺", str(liquidity["shortfall"]))
+    table = Table(title=f"Moonwell Position — {token}")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+    table.add_row("Supply Balance (cToken)", str(supply_bal))
+    table.add_row("Borrow Balance", str(borrow_bal))
+    table.add_row("Account Liquidity", str(liquidity["liquidity"]))
+    table.add_row("Account Shortfall", str(liquidity["shortfall"]))
 
     console.print(table)
 
 
 # ============================================================
-# 工具命令
+# Aave V3 Commands
+# ============================================================
+
+@cli.group()
+def aave():
+    """Aave V3 lending protocol"""
+    pass
+
+
+@aave.command("supply")
+@click.option("--asset", "-a", required=True, help="Token name (e.g. USDC, WETH)")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.option("--collateral/--no-collateral", default=True, help="Use as collateral")
+@click.pass_context
+def aave_supply(ctx, asset, amount, collateral):
+    """Supply assets to Aave V3 pool"""
+    from defi_autopilot.protocols.aave import AaveV3Client, BASE_TOKENS_AAVE
+
+    chain_id = ctx.obj["chain_id"]
+    client = AaveV3Client(chain_id)
+
+    token_addr = BASE_TOKENS_AAVE.get(asset.upper())
+    if token_addr is None:
+        console.print(f"[red]Unknown token: {asset}[/red]")
+        console.print(f"Available: {', '.join(BASE_TOKENS_AAVE.keys())}")
+        sys.exit(1)
+
+    result = client.supply(token_addr, amount, use_as_collateral=collateral)
+    _print_tx_result(result)
+
+
+@aave.command("borrow")
+@click.option("--asset", "-a", required=True, help="Token to borrow")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.option("--stable", is_flag=True, help="Use stable rate (default: variable)")
+@click.pass_context
+def aave_borrow(ctx, asset, amount, stable):
+    """Borrow assets from Aave V3 pool"""
+    from defi_autopilot.protocols.aave import (
+        AaveV3Client, BASE_TOKENS_AAVE,
+        INTEREST_RATE_VARIABLE, INTEREST_RATE_STABLE,
+    )
+
+    chain_id = ctx.obj["chain_id"]
+    client = AaveV3Client(chain_id)
+
+    token_addr = BASE_TOKENS_AAVE.get(asset.upper())
+    if token_addr is None:
+        console.print(f"[red]Unknown token: {asset}[/red]")
+        sys.exit(1)
+
+    rate_mode = INTEREST_RATE_STABLE if stable else INTEREST_RATE_VARIABLE
+    result = client.borrow(token_addr, amount, interest_rate_mode=rate_mode)
+    _print_tx_result(result)
+
+
+@aave.command("repay")
+@click.option("--asset", "-a", required=True, help="Token to repay")
+@click.option("--amount", "-n", type=int, default=2**256 - 1, help="Amount in wei (default: repay all)")
+@click.pass_context
+def aave_repay(ctx, asset, amount):
+    """Repay borrowed assets to Aave V3"""
+    from defi_autopilot.protocols.aave import AaveV3Client, BASE_TOKENS_AAVE
+
+    chain_id = ctx.obj["chain_id"]
+    client = AaveV3Client(chain_id)
+
+    token_addr = BASE_TOKENS_AAVE.get(asset.upper())
+    if token_addr is None:
+        console.print(f"[red]Unknown token: {asset}[/red]")
+        sys.exit(1)
+
+    result = client.repay(token_addr, amount)
+    _print_tx_result(result)
+
+
+@aave.command("position")
+@click.option("--user", "-u", type=str, default=None, help="Address to query")
+@click.pass_context
+def aave_position(ctx, user):
+    """Query Aave V3 account data"""
+    from defi_autopilot.protocols.aave import AaveV3Client
+    from defi_autopilot.core.signer import get_address
+
+    chain_id = ctx.obj["chain_id"]
+    client = AaveV3Client(chain_id)
+
+    user = user or get_address()
+    data = client.get_user_account_data(user)
+
+    table = Table(title=f"Aave V3 Account — Chain {chain_id}")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+    table.add_row("Total Collateral (USD)", str(data["total_collateral_base"]))
+    table.add_row("Total Debt (USD)", str(data["total_debt_base"]))
+    table.add_row("Available Borrows (USD)", str(data["available_borrows_base"]))
+    table.add_row("LTV", f"{data['ltv'] / 100:.2f}%")
+    table.add_row("Health Factor", f"{data['health_factor'] / 1e18:.4f}")
+    console.print(table)
+
+
+# ============================================================
+# 1inch Commands
+# ============================================================
+
+@cli.group()
+def inch():
+    """1inch DEX aggregator"""
+    pass
+
+
+@inch.command("quote")
+@click.option("--src", "-s", required=True, help="Source token")
+@click.option("--dst", "-d", required=True, help="Destination token")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.pass_context
+def inch_quote(ctx, src, dst, amount):
+    """Get swap quote from 1inch"""
+    from defi_autopilot.protocols.oneinch import OneInchClient, BASE_TOKENS_INCH
+
+    chain_id = ctx.obj["chain_id"]
+    client = OneInchClient(chain_id)
+
+    src_addr = BASE_TOKENS_INCH.get(src.upper(), src)
+    dst_addr = BASE_TOKENS_INCH.get(dst.upper(), dst)
+
+    quote = client.get_quote(src_addr, dst_addr, amount)
+    console.print(f"[green]Quote:[/green] {quote.get('toAmount', 'N/A')}")
+    console.print(f"  SRC: {src_addr}")
+    console.print(f"  DST: {dst_addr}")
+
+
+@inch.command("swap")
+@click.option("--src", "-s", required=True, help="Source token")
+@click.option("--dst", "-d", required=True, help="Destination token")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.option("--slippage", type=float, default=1.0, help="Max slippage %")
+@click.pass_context
+def inch_swap(ctx, src, dst, amount, slippage):
+    """Execute swap via 1inch aggregator"""
+    from defi_autopilot.protocols.oneinch import OneInchClient, BASE_TOKENS_INCH
+
+    chain_id = ctx.obj["chain_id"]
+    client = OneInchClient(chain_id)
+
+    src_addr = BASE_TOKENS_INCH.get(src.upper(), src)
+    dst_addr = BASE_TOKENS_INCH.get(dst.upper(), dst)
+
+    result = client.get_swap(src_addr, dst_addr, amount, slippage=slippage)
+    _print_tx_result(result)
+
+
+# ============================================================
+# Utility Commands
 # ============================================================
 
 @cli.command("markets")
 @click.pass_context
 def list_markets(ctx):
-    """列出可用的协议和市场"""
-    table = Table(title="可用市场")
-    table.add_column("协议", style="cyan")
-    table.add_column("市场/代币", style="green")
-    table.add_column("类型", style="yellow")
-    table.add_column("链", style="magenta")
+    """List available protocols and markets"""
+    from defi_autopilot.protocols.aave import BASE_TOKENS_AAVE
+    from defi_autopilot.protocols.oneinch import BASE_TOKENS_INCH
 
-    # Morpho
+    table = Table(title="Available Markets")
+    table.add_column("Protocol", style="cyan")
+    table.add_column("Market/Token", style="green")
+    table.add_column("Type", style="yellow")
+    table.add_column("Chain", style="magenta")
+
     for name in sorted(BASE_MARKETS.keys()):
-        table.add_row("Morpho", name, "借贷", "Base")
+        table.add_row("Morpho Blue", name, "Lending", "Base")
 
-    # Moonwell
     for name in sorted(BASE_MOONWELL["tokens"].keys()):
-        table.add_row("Moonwell", name, "借贷", "Base")
+        table.add_row("Moonwell", name, "Lending", "Base")
+
+    for name in sorted(BASE_TOKENS_AAVE.keys()):
+        table.add_row("Aave V3", name, "Lending", "Multi-chain")
+
+    for name in sorted(BASE_TOKENS_INCH.keys()):
+        table.add_row("1inch", name, "DEX Aggregator", "Multi-chain")
 
     console.print(table)
 
 
 # ============================================================
-# 辅助函数
+# Helper functions
 # ============================================================
 
 def _print_tx_result(result: dict):
-    """打印交易结果"""
+    """Print transaction result"""
     if result.get("status") == 1:
-        console.print(f"[green]✅ 交易成功[/green]")
+        console.print("[green]TX Success[/green]")
     else:
-        console.print(f"[red]❌ 交易失败[/red]")
+        console.print("[red]TX Failed[/red]")
 
     console.print(f"  TX: {result.get('tx_hash', 'N/A')}")
     if "block_number" in result:

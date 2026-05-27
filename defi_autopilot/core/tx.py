@@ -1,4 +1,4 @@
-"""defi-autopilot 交易广播模块"""
+"""defi-autopilot transaction broadcast module"""
 
 import time
 from typing import Optional, Dict, Any
@@ -9,7 +9,7 @@ from .rpc import get_w3
 from .signer import get_signer
 
 
-GAS_MULTIPLIER = 1.1  # Gas 估算加成 10%
+GAS_MULTIPLIER = 1.1  # Gas estimation markup: 10%
 
 
 def build_and_send_tx(
@@ -25,16 +25,16 @@ def build_and_send_tx(
     timeout: int = 120,
 ) -> Dict[str, Any]:
     """
-    构建、签名、发送交易，并等待回执。
+    Build, sign, send a transaction, and wait for receipt.
     """
     w3 = get_w3(chain_id)
     signer = get_signer(private_key)
     address = Web3.to_checksum_address(signer.address)
 
-    # 获取 nonce
+    # Get nonce
     nonce = w3.eth.get_transaction_count(address)
 
-    # 估算 gas
+    # Estimate gas
     if gas_limit is None:
         try:
             estimated = w3.eth.estimate_gas({
@@ -45,9 +45,9 @@ def build_and_send_tx(
             })
             gas_limit = int(estimated * GAS_MULTIPLIER)
         except Exception as e:
-            raise RuntimeError(f"Gas 估算失败: {e}")
+            raise RuntimeError(f"Gas estimation failed: {e}")
 
-    # 获取 EIP-1559 费用
+    # Get EIP-1559 fees
     if max_fee_per_gas is None:
         block = w3.eth.get_block("latest")
         base_fee = block.get("baseFeePerGas", w3.eth.gas_price)
@@ -67,10 +67,10 @@ def build_and_send_tx(
         "chainId": chain_id,
     }
 
-    # 签名
+    # Sign
     signed = w3.eth.account.sign_transaction(tx, signer.key)
 
-    # 发送
+    # Send
     tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
 
     result = {
@@ -92,14 +92,14 @@ def build_and_send_tx(
 def wait_receipt(
     w3: Web3, tx_hash: bytes, timeout: int = 120, poll_interval: float = 1.0
 ) -> TxReceipt:
-    """等待交易回执"""
+    """Wait for transaction receipt"""
     start = time.time()
     while time.time() - start < timeout:
         receipt = w3.eth.get_transaction_receipt(tx_hash)
         if receipt is not None:
             return receipt
         time.sleep(poll_interval)
-    raise TimeoutError(f"交易 {tx_hash.hex()} 在 {timeout}s 内未确认")
+    raise TimeoutError(f"Transaction {tx_hash.hex()} not confirmed within {timeout}s")
 
 
 def check_allowance(
@@ -108,7 +108,7 @@ def check_allowance(
     owner: str,
     spender: str,
 ) -> int:
-    """查询 ERC20 allowance"""
+    """Query ERC20 allowance"""
     w3 = get_w3(chain_id)
     erc20_abi = [
         {
@@ -137,7 +137,7 @@ def approve_token(
     amount: int,
     private_key: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """授权 ERC20 token"""
+    """Approve ERC20 token spending"""
     erc20_approve_abi = [
         {
             "constant": False,

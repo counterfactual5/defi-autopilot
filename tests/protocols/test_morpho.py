@@ -1,4 +1,4 @@
-"""MorphoClient 单元测试"""
+"""MorphoClient unit tests"""
 
 import pytest
 from unittest.mock import MagicMock, patch
@@ -14,10 +14,10 @@ from defi_autopilot.protocols.morpho import (
 
 
 class TestMarketParams:
-    """测试 MarketParams 数据类"""
+    """Test MarketParams dataclass"""
 
     def test_market_id_deterministic(self):
-        """相同参数应产生相同 market ID"""
+        """Same parameters should produce the same market ID"""
         mp = MarketParams(
             loan_token="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
             collateral_token="0x4200000000000000000000000000000000000006",
@@ -32,7 +32,7 @@ class TestMarketParams:
         assert len(id1) == 32
 
     def test_market_id_different_params(self):
-        """不同参数应产生不同 market ID"""
+        """Different parameters should produce different market IDs"""
         mp1 = MarketParams(
             loan_token="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
             collateral_token="0x4200000000000000000000000000000000000006",
@@ -45,7 +45,7 @@ class TestMarketParams:
             collateral_token="0x4200000000000000000000000000000000000006",
             oracle="0x5c9e10a30610EfE425697e3b9145569cAcdA7A3f",
             irm="0x870aAcb0EB19c95DaE3Fb3e4047a8D7F28461141",
-            lltv=800000000000000000,  # 不同的 LLTV
+            lltv=800000000000000000,  # Different LLTV
         )
         assert mp1.market_id != mp2.market_id
 
@@ -64,26 +64,26 @@ class TestMarketParams:
 
 
 class TestBaseMarkets:
-    """测试预置市场配置"""
+    """Test preset market configurations"""
 
     def test_base_markets_not_empty(self):
         assert len(BASE_MARKETS) > 0
 
     def test_base_markets_have_valid_addresses(self):
         for name, mp in BASE_MARKETS.items():
-            assert Web3.is_address(mp.loan_token), f"{name}: loan_token 无效"
-            assert Web3.is_address(mp.collateral_token), f"{name}: collateral_token 无效"
-            assert Web3.is_address(mp.oracle), f"{name}: oracle 无效"
-            assert Web3.is_address(mp.irm), f"{name}: irm 无效"
-            assert 0 < mp.lltv < 10**18, f"{name}: lltv 超出范围"
+            assert Web3.is_address(mp.loan_token), f"{name}: invalid loan_token"
+            assert Web3.is_address(mp.collateral_token), f"{name}: invalid collateral_token"
+            assert Web3.is_address(mp.oracle), f"{name}: invalid oracle"
+            assert Web3.is_address(mp.irm), f"{name}: invalid irm"
+            assert 0 < mp.lltv < 10**18, f"{name}: lltv out of range"
 
     def test_base_tokens_addresses(self):
         for name, addr in BASE_TOKENS.items():
-            assert Web3.is_address(addr), f"{name}: 地址无效"
+            assert Web3.is_address(addr), f"{name}: invalid address"
 
 
 class TestMorphoClient:
-    """测试 MorphoClient 初始化"""
+    """Test MorphoClient initialization"""
 
     @patch("defi_autopilot.protocols.morpho.client.get_w3")
     @patch("defi_autopilot.protocols.morpho.client.get_chain_config")
@@ -98,13 +98,13 @@ class TestMorphoClient:
     @patch("defi_autopilot.protocols.morpho.client.get_w3")
     @patch("defi_autopilot.protocols.morpho.client.get_chain_config")
     def test_client_invalid_chain(self, mock_config, mock_w3):
-        mock_config.side_effect = ValueError("不支持的链 ID: 999")
+        mock_config.side_effect = ValueError("Unsupported chain ID: 999")
         with pytest.raises(ValueError):
             MorphoClient(999)
 
 
 class TestAbiIntegrity:
-    """测试 ABI 完整性"""
+    """Test ABI completeness"""
 
     def test_morpho_abi_has_required_functions(self):
         function_names = [
@@ -115,4 +115,4 @@ class TestAbiIntegrity:
                      "withdrawCollateral", "borrow", "repay",
                      "position", "market"]
         for fn in required:
-            assert fn in function_names, f"ABI 缺少函数: {fn}"
+            assert fn in function_names, f"ABI missing function: {fn}"

@@ -1,4 +1,4 @@
-"""defi-autopilot Signer 管理"""
+"""defi-autopilot signer management"""
 
 import os
 from typing import Optional
@@ -9,12 +9,12 @@ from web3 import Web3
 
 def get_signer(private_key: Optional[str] = None) -> LocalAccount:
     """
-    获取签名账户。
-    优先使用传入的 private_key，否则从环境变量 SIGNER_PRIVATE_KEY 读取。
+    Get the signing account.
+    Uses the provided private_key first, otherwise reads SIGNER_PRIVATE_KEY from environment.
     """
     key = private_key or os.environ.get("SIGNER_PRIVATE_KEY")
     if not key:
-        raise ValueError("未提供私钥（通过参数或 SIGNER_PRIVATE_KEY 环境变量）")
+        raise ValueError("No private key provided (via argument or SIGNER_PRIVATE_KEY env var)")
 
     if not key.startswith("0x"):
         key = "0x" + key
@@ -23,6 +23,6 @@ def get_signer(private_key: Optional[str] = None) -> LocalAccount:
 
 
 def get_address(private_key: Optional[str] = None) -> str:
-    """获取签名地址（checksummed）"""
+    """Get the signer address (checksummed)"""
     signer = get_signer(private_key)
     return Web3.to_checksum_address(signer.address)

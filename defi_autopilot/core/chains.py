@@ -1,29 +1,29 @@
-"""defi-autopilot 核心链配置"""
+"""defi-autopilot core chain configuration"""
 
 from dataclasses import dataclass, field
 from typing import Dict
 
-# 多链 RPC 端点（从环境变量或 .env 读取）
+# Multi-chain RPC endpoints (read from environment variables or .env)
 CHAIN_CONFIG: Dict[int, "ChainConfig"] = {}
 
 @dataclass
 class ChainConfig:
-    """单条链的配置"""
+    """Configuration for a single chain"""
     chain_id: int
     name: str
     rpc_url: str
     explorer_url: str
     native_token: str
-    # 协议地址
+    # Protocol addresses
     morpho_blue: str = "0xBBBBBBBBB9cC5e90e3b3af64bdAF62C37EEFFcBb"
     moonwell_comptroller: str = ""
 
-# 预置链配置
+# Preset chain configurations
 CHAIN_PRESETS = {
     8453: ChainConfig(
         chain_id=8453,
         name="Base",
-        rpc_url="",  # 从 .env 填充
+        rpc_url="",  # Filled from .env
         explorer_url="https://basescan.org",
         native_token="ETH",
         morpho_blue="0xBBBBBBBBB9cC5e90e3b3af64bdAF62C37EEFFcBb",
