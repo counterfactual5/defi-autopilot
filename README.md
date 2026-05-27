@@ -2,7 +2,13 @@
 
 > Multi-chain, multi-protocol DeFi automation toolkit
 
-A one-stop DeFi operations CLI covering supply, borrow, repay, collateral management, and DEX aggregation. Multi-chain deployment with extensible protocol architecture.
+<p align="center">
+  <img src="https://img.shields.io/badge/python-%E2%89%A53.10-blue" alt="Python">
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
+  <a href="https://github.com/counterfactual5/defi-autopilot/actions/workflows/test.yml"><img src="https://github.com/counterfactual5/defi-autopilot/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+</p>
+
+Supply, borrow, repay, collateral management, and DEX aggregation — all from one CLI. Extensible protocol architecture with Morpho Blue, Moonwell, Aave V3, and 1inch.
 
 ## Architecture
 
@@ -37,12 +43,24 @@ defi-autopilot/
 ### Install
 
 ```bash
-pip install -e ".[dev]"
+pip install defi-autopilot
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/counterfactual5/defi-autopilot.git
+cd defi-autopilot
+pip install -e .
 ```
 
 ### Configure
 
-Create a `.env` file:
+Copy `.env.example` to `.env` and fill in your values:
+
+```bash
+cp .env.example .env
+```
 
 ```env
 # RPC endpoints
@@ -96,12 +114,17 @@ defi --dry-run morpho supply ...         # simulate only
 
 ```python
 from defi_autopilot.protocols.morpho import MorphoClient, BASE_MARKETS
+from defi_autopilot.protocols.moonwell import MoonwellClient
 from defi_autopilot.protocols.aave import AaveV3Client, BASE_TOKENS_AAVE
 from defi_autopilot.protocols.oneinch import OneInchClient, BASE_TOKENS_INCH
 
 # Morpho Blue
 morpho = MorphoClient(8453)
 result = morpho.supply(BASE_MARKETS["USDC-WETH-77"], amount=1000000000)
+
+# Moonwell
+moonwell = MoonwellClient(8453)
+result = moonwell.supply("USDC", amount=1000000000)
 
 # Aave V3
 aave = AaveV3Client(8453)
@@ -115,12 +138,6 @@ quote = inch.get_quote(
     BASE_TOKENS_INCH["WETH"],
     amount=1000000000,
 )
-```
-
-## Testing
-
-```bash
-pytest tests/ -v
 ```
 
 ## 🛠️ Development
