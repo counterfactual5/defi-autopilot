@@ -24,6 +24,7 @@ defi-autopilot/
 │   │   ├── morpho/        # Morpho Blue (isolated lending markets)
 │   │   ├── moonwell/      # Moonwell (Compound V2 fork)
 │   │   ├── aave/          # Aave V3 (lending)
+│   │   ├── uniswap/       # Uniswap V3 (DEX)
 │   │   └── oneinch/       # 1inch (DEX aggregator)
 │   └── cli.py             # Click CLI entry point
 └── tests/
@@ -36,6 +37,7 @@ defi-autopilot/
 | **Morpho Blue** | Isolated Lending | Base, Ethereum, Arbitrum | supply, supplyCollateral, borrow, repay, withdraw, withdrawCollateral |
 | **Moonwell** | Lending (Compound V2) | Base | supply(mint), redeem, borrow, repayBorrow |
 | **Aave V3** | Lending | Base, Ethereum, Arbitrum, Optimism, Polygon | supply, withdraw, borrow, repay, collateral toggle |
+| **Uniswap V3** | DEX | Base, Ethereum, Arbitrum, Optimism, Polygon, Unichain | quote, swap, price |
 | **1inch** | DEX Aggregator | Base, Ethereum, Arbitrum, Optimism, Polygon | quote, swap |
 
 ## Quick Start
@@ -100,6 +102,11 @@ defi aave supply --asset USDC --amount 1000000000
 defi aave borrow --asset WETH --amount 500000000000000000
 defi aave repay --asset WETH
 defi aave position
+
+# --- Uniswap V3 ---
+defi uniswap quote --in USDC --out WETH --amount 1000000000
+defi uniswap swap --in USDC --out WETH --amount 1000000000
+defi uniswap price --in WETH --out USDC
 
 # --- 1inch ---
 defi inch quote --src USDC --dst WETH --amount 1000000000
