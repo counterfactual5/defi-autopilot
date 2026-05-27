@@ -307,6 +307,66 @@ def moonwell_position(ctx, token, user):
 
 
 # ============================================================
+# Uniswap V3 Commands
+# ============================================================
+
+@cli.group()
+def uniswap():
+    """Uniswap V3 DEX"""
+    pass
+
+
+@uniswap.command("quote")
+@click.option("--in", "-i", "token_in", required=True, help="Input token")
+@click.option("--out", "-o", "token_out", required=True, help="Output token")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.pass_context
+def uniswap_quote(ctx, token_in, token_out, amount):
+    """Get swap quote from Uniswap V3"""
+    from defi_autopilot.protocols.uniswap import UniswapClient
+
+    chain_id = ctx.obj["chain_id"]
+    client = UniswapClient(chain_id)
+
+    quote = client.get_quote(token_in, token_out, amount)
+    console.print(f"[green]Quote:[/green] {quote.get('quote', 'N/A')}")
+    console.print(f"  Route: {quote.get('route', 'N/A')}")
+    console.print(f"  Gas estimate: {quote.get('gasEstimate', 'N/A')}")
+
+
+@uniswap.command("swap")
+@click.option("--in", "-i", "token_in", required=True, help="Input token")
+@click.option("--out", "-o", "token_out", required=True, help="Output token")
+@click.option("--amount", "-n", required=True, type=int, help="Amount in wei")
+@click.option("--slippage", type=int, default=100, help="Max slippage in bps (default 100 = 1%)")
+@click.pass_context
+def uniswap_swap(ctx, token_in, token_out, amount, slippage):
+    """Execute swap on Uniswap V3"""
+    from defi_autopilot.protocols.uniswap import UniswapClient
+
+    chain_id = ctx.obj["chain_id"]
+    client = UniswapClient(chain_id)
+
+    result = client.swap(token_in, token_out, amount, slippage_bps=slippage)
+    _print_tx_result(result)
+
+
+@uniswap.command("price")
+@click.option("--in", "-i", "token_in", required=True, help="Input token")
+@click.option("--out", "-o", "token_out", required=True, help="Output token")
+@click.pass_context
+def uniswap_price(ctx, token_in, token_out):
+    """Get token price on Uniswap"""
+    from defi_autopilot.protocols.uniswap import UniswapClient
+
+    chain_id = ctx.obj["chain_id"]
+    client = UniswapClient(chain_id)
+
+    price = client.get_price(token_in, token_out)
+    console.print(f"[green]Price:[/green] 1 {token_in} = {price:.6f} {token_out}")
+
+
+# ============================================================
 # Aave V3 Commands
 # ============================================================
 
@@ -475,6 +535,11 @@ def list_markets(ctx):
     table.add_column("Market/Token", style="green")
     table.add_column("Type", style="yellow")
     table.add_column("Chain", style="magenta")
+
+    from defi_autopilot.protocols.uniswap import BASE_TOKENS_UNI
+
+    for name in sorted(BASE_TOKENS_UNI.keys()):
+        table.add_row("Uniswap V3", name, "DEX", "Multi-chain")
 
     for name in sorted(BASE_MARKETS.keys()):
         table.add_row("Morpho Blue", name, "Lending", "Base")
