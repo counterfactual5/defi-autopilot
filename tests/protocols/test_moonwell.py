@@ -1,4 +1,4 @@
-"""MoonwellClient 单元测试"""
+"""MoonwellClient unit tests"""
 
 import pytest
 from unittest.mock import MagicMock, patch
@@ -13,22 +13,22 @@ from defi_autopilot.protocols.moonwell import (
 
 
 class TestBaseMoonwell:
-    """测试 Base 链 Moonwell 配置"""
+    """Test Base chain Moonwell configuration"""
 
     def test_comptroller_address_valid(self):
         assert Web3.is_address(BASE_MOONWELL["comptroller"])
 
     def test_tokens_have_valid_addresses(self):
         for name, info in BASE_MOONWELL["tokens"].items():
-            assert Web3.is_address(info["cToken"]), f"{name}: cToken 无效"
-            assert Web3.is_address(info["underlying"]), f"{name}: underlying 无效"
+            assert Web3.is_address(info["cToken"]), f"{name}: invalid cToken"
+            assert Web3.is_address(info["underlying"]), f"{name}: invalid underlying"
 
     def test_at_least_one_token(self):
         assert len(BASE_MOONWELL["tokens"]) >= 1
 
 
 class TestAbiIntegrity:
-    """测试 ABI 完整性"""
+    """Test ABI completeness"""
 
     def test_ctoken_abi_has_required_functions(self):
         function_names = [
@@ -38,7 +38,7 @@ class TestAbiIntegrity:
         required = ["mint", "redeem", "redeemUnderlying", "borrow", "repayBorrow",
                      "balanceOf", "borrowBalanceCurrent", "exchangeRateCurrent", "underlying"]
         for fn in required:
-            assert fn in function_names, f"cToken ABI 缺少: {fn}"
+            assert fn in function_names, f"cToken ABI missing: {fn}"
 
     def test_comptroller_abi_has_required_functions(self):
         function_names = [
@@ -47,11 +47,11 @@ class TestAbiIntegrity:
         ]
         required = ["enterMarkets", "getAccountLiquidity", "markets"]
         for fn in required:
-            assert fn in function_names, f"Comptroller ABI 缺少: {fn}"
+            assert fn in function_names, f"Comptroller ABI missing: {fn}"
 
 
 class TestMoonwellClient:
-    """测试 MoonwellClient"""
+    """Test MoonwellClient"""
 
     @patch("defi_autopilot.protocols.moonwell.client.get_w3")
     @patch("defi_autopilot.protocols.moonwell.client.get_chain_config")

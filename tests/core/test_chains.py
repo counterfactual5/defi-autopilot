@@ -1,11 +1,11 @@
-"""Core 模块单元测试"""
+"""Core module unit tests"""
 
 import pytest
 from defi_autopilot.core.chains import CHAIN_PRESETS, ChainConfig
 
 
 class TestChainPresets:
-    """测试链配置"""
+    """Test chain configurations"""
 
     def test_base_chain_exists(self):
         assert 8453 in CHAIN_PRESETS
@@ -24,9 +24,9 @@ class TestChainPresets:
             assert config.native_token
 
     def test_morpho_address_consistent(self):
-        """Morpho Blue 地址在所有链上应相同"""
+        """Morpho Blue address should be the same across all chains"""
         morpho_addrs = set()
         for config in CHAIN_PRESETS.values():
             if config.morpho_blue:
                 morpho_addrs.add(config.morpho_blue.lower())
-        assert len(morpho_addrs) == 1, "Morpho 地址不一致"
+        assert len(morpho_addrs) == 1, "Morpho address is inconsistent"

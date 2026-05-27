@@ -1,4 +1,4 @@
-"""Moonwell 协议模块"""
+"""Moonwell protocol module"""
 
 from .client import (
     MoonwellClient,
