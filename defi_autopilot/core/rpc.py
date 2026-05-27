@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from web3 import Web3
 from web3.middleware import ExtraDataToPOAMiddleware
 
-from .chains import ChainConfig, CHAIN_PRESETS
+from .chains import ChainConfig, CHAIN_PRESETS, _RPC_ENV_KEYS
 
 
 # Cache of initialized Web3 instances
@@ -22,7 +22,11 @@ def get_w3(chain_id: int, rpc_url: Optional[str] = None) -> Web3:
 
     url = rpc_url or config.rpc_url
     if not url:
-        raise ValueError(f"Chain {config.name} (ID={chain_id}) has no RPC URL configured")
+        raise ValueError(
+            f"Chain {config.name} (ID={chain_id}) has no RPC URL configured. "
+            f"Set the {_RPC_ENV_KEYS.get(chain_id, 'RPC_URL')} environment variable "
+            f"or pass rpc_url explicitly."
+        )
 
     w3 = Web3(Web3.HTTPProvider(url))
 

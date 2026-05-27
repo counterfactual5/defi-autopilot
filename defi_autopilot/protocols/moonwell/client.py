@@ -204,21 +204,26 @@ class MoonwellClient:
                 private_key,
             )
 
-        # Enter market (use as collateral)
+        # Enter market (use as collateral) — only if not already in
         if enter_market:
             comptroller = BASE_MOONWELL["comptroller"]
             comp = self._get_comptroller(comptroller)
-            # Check if already in market
             try:
-                data_enter = comp.encode_abi(
-                    "enterMarkets", [[Web3.to_checksum_address(ctoken_address)]]
-                )
-                build_and_send_tx(
-                    chain_id=self.chain_id,
-                    to=comptroller,
-                    data=data_enter,
-                    private_key=private_key,
-                )
+                market_info = comp.functions.markets(
+                    Web3.to_checksum_address(ctoken_address)
+                ).call()
+                is_listed = market_info[0]
+                if is_listed:
+                    # Only send enterMarkets if not already collateralized
+                    data_enter = comp.encode_abi(
+                        "enterMarkets", [[Web3.to_checksum_address(ctoken_address)]]
+                    )
+                    build_and_send_tx(
+                        chain_id=self.chain_id,
+                        to=comptroller,
+                        data=data_enter,
+                        private_key=private_key,
+                    )
             except Exception:
                 pass  # May already be in market
 

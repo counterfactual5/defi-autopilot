@@ -300,7 +300,7 @@ class MorphoClient:
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
 
-        # Check and handle approval
+        # Check and handle approval (use max approve to save gas on future txs)
         if not skip_approval:
             allowance = check_allowance(
                 self.chain_id, market.loan_token, signer_addr, self._morpho_address
@@ -308,7 +308,7 @@ class MorphoClient:
             if allowance < amount:
                 approve_token(
                     self.chain_id, market.loan_token,
-                    self._morpho_address, amount, private_key
+                    self._morpho_address, 2**256 - 1, private_key
                 )
 
         data = self.contract.encode_abi(
