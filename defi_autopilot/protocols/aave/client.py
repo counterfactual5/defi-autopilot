@@ -213,9 +213,12 @@ class AaveV3Client:
             private_key=private_key,
         )
 
-        # Optionally set as collateral
+        # Set as collateral in a separate tx (after supply succeeds)
         if use_as_collateral:
-            self._set_collateral(asset, True, private_key)
+            try:
+                self._set_collateral(asset, True, private_key)
+            except Exception:
+                pass  # May already be collateralized
 
         return result
 

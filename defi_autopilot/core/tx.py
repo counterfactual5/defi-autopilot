@@ -15,7 +15,7 @@ GAS_MULTIPLIER = 1.1  # Gas estimation markup: 10%
 def build_and_send_tx(
     chain_id: int,
     to: str,
-    data: bytes,
+    data: bytes = b"",
     value: int = 0,
     gas_limit: Optional[int] = None,
     max_fee_per_gas: Optional[int] = None,
@@ -26,7 +26,16 @@ def build_and_send_tx(
 ) -> Dict[str, Any]:
     """
     Build, sign, send a transaction, and wait for receipt.
+
+    Args:
+        data: Transaction calldata as bytes. Hex strings (0x-prefixed) are
+              automatically converted to bytes.
     """
+    # Ensure data is bytes (accept hex strings too)
+    if isinstance(data, str):
+        data = bytes.fromhex(data.removeprefix("0x"))
+    elif not isinstance(data, (bytes, bytearray)):
+        data = b""
     w3 = get_w3(chain_id)
     signer = get_signer(private_key)
     address = Web3.to_checksum_address(signer.address)
