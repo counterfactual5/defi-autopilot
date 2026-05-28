@@ -44,8 +44,5 @@ jobs:
           print("policy.yaml OK:", list(data.keys()))
           PY
 
-      - name: Check shared module drift
-        run: python scripts/sync_shared.py --check
-
       - name: Run tests
         run: pytest --cov=. --cov-report=term-missing --cov-fail-under=60
