@@ -28,7 +28,8 @@ defi-autopilot/
 │   │   ├── oneinch/       # 1inch (DEX aggregator)
 │   │   ├── lido/          # Lido (liquid staking)
 │   │   ├── compound/      # Compound V3 (lending)
-│   │   └── curve/         # Curve Finance (DEX)
+│   │   ├── curve/         # Curve Finance (DEX)
+│   │   └── cctp/          # Circle CCTP (cross-chain USDC, resumable)
 │   └── cli.py             # Click CLI entry point
 └── tests/
 ```
@@ -45,6 +46,7 @@ defi-autopilot/
 | **Lido** | Liquid Staking | Ethereum, Base, Arbitrum, Optimism, Polygon | stake ETH, wrap/unwrap stETH/wstETH |
 | **Compound V3** | Lending | Ethereum, Base, Arbitrum, Polygon | supply, withdraw, supplyCollateral, borrow, repay |
 | **Curve** | Stablecoin DEX | Ethereum, Base, Arbitrum, Optimism | swap, add/remove liquidity, quote |
+| **Circle CCTP** | Cross-chain USDC bridge | Ethereum, Optimism, Arbitrum, Base, Polygon, Unichain, Avalanche | transfer (burn→attest→mint), resumable |
 
 ## Quick Start
 
@@ -118,6 +120,16 @@ defi uniswap price --in WETH --out USDC
 defi inch quote --src USDC --dst WETH --amount 1000000000
 defi inch swap --src USDC --dst WETH --amount 1000000000 --slippage 1.0
 
+# --- Circle CCTP (native cross-chain USDC) ---
+defi cctp domains                                    # list supported chains + domain IDs
+# Burn 10 USDC on Base (-c 8453) and mint on Arbitrum (--to 42161).
+# Amount is in USDC base units (6 decimals): 10 USDC = 10000000
+defi -c 8453 cctp transfer --to 42161 --amount 10000000 --run-id move-usdc-1
+defi cctp status --run-id move-usdc-1                 # inspect checkpoint
+# Interrupted mid-flight? Re-run the SAME command — it resumes at attest/mint,
+# never re-burning.
+defi -c 8453 cctp transfer --to 42161 --amount 10000000 --run-id move-usdc-1
+
 # --- General ---
 defi -c 1 morpho position --market ...  # specify chain
 defi --dry-run morpho supply ...         # simulate only
@@ -151,6 +163,17 @@ quote = inch.get_quote(
     BASE_TOKENS_INCH["WETH"],
     amount=1000000000,
 )
+
+# Circle CCTP — native cross-chain USDC, resumable via state machine
+from defi_autopilot.protocols.cctp import CCTPClient
+
+cctp = CCTPClient(8453)  # source = Base
+result = cctp.transfer(
+    amount=10_000_000,        # 10 USDC (6 decimals)
+    dest_chain_id=42161,      # Arbitrum
+    run_id="move-usdc-1",     # re-run with same id to resume after a crash
+)
+# {"status": "completed", "burn_tx": ..., "mint_tx": ...}
 ```
 
 ## 🛠️ Development
@@ -172,6 +195,7 @@ uv run pytest tests/ -v
 - [x] 1inch DEX aggregation
 - [x] Multi-chain (Base, Ethereum, Arbitrum, Optimism, Polygon)
 - [x] Compound V3 integration
+- [x] Circle CCTP cross-chain USDC (resumable burn & mint)
 - [ ] Uniswap V3/V4 LP management
 - [ ] Strategy automation (auto-compound, yield optimization)
 - [ ] Position monitoring & alerting
