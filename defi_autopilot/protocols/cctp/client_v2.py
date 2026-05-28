@@ -28,6 +28,7 @@ Reference: https://developers.circle.com/cctp (V2 interface)
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 import uuid
@@ -52,6 +53,8 @@ from .client import (
     USDC_DECIMALS,
     address_to_bytes32,
 )
+
+_log = logging.getLogger(__name__)
 
 # One USDC cent (0.01 USDC) expressed in USDC base units (6 decimals).
 _CENTS_TO_SUBUNITS = 10_000
@@ -269,25 +272,44 @@ class CCTPv2Client:
         url = f"{api_base}/v2/messages/{self.domain}"
         params = {"transactionHash": _hex0x(burn_tx)}
         deadline = time.time() + timeout
+        last_status: Optional[str] = None
         while time.time() < deadline:
             try:
                 resp = httpx.get(url, params=params, timeout=30)
-            except httpx.HTTPError:
+            except httpx.HTTPError as exc:
+                _log.warning("CCTP V2 attestation poll error (%s); retrying", exc)
                 time.sleep(poll_interval)
                 continue
-            # 404 = not observed yet; keep polling.
+            if resp.status_code == 429:
+                _log.warning("CCTP attestation rate-limited (429); backing off")
+                time.sleep(max(poll_interval, 5.0))
+                continue
+            # 404 = burn not observed yet; keep polling.
+            if resp.status_code == 404:
+                if last_status != "not_found":
+                    _log.info("CCTP V2 burn %s not yet observed", burn_tx)
+                    last_status = "not_found"
+                time.sleep(poll_interval)
+                continue
             if resp.status_code == 200:
                 messages = resp.json().get("messages") or []
                 if messages:
                     msg = messages[0]
-                    if msg.get("status") == "complete" and msg.get("attestation") not in (None, "PENDING"):
+                    status = msg.get("status")
+                    if status != last_status:
+                        _log.info(
+                            "CCTP V2 attestation status=%s for burn %s", status, burn_tx
+                        )
+                        last_status = status
+                    if status == "complete" and msg.get("attestation") not in (None, "PENDING"):
                         return {
                             "message": msg["message"],
                             "attestation": msg["attestation"],
                         }
             time.sleep(poll_interval)
         raise TimeoutError(
-            f"CCTP V2 attestation for {burn_tx} not ready within {timeout}s"
+            f"CCTP V2 attestation for {burn_tx} not ready within {timeout}s "
+            f"(last status: {last_status})"
         )
 
     # ── Step 3: mint ─────────────────────────────────────────────────────────

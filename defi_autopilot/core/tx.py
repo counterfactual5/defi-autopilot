@@ -256,6 +256,91 @@ def check_allowance(
     ).call()
 
 
+_ERC20_DECIMALS_ABI = [
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "decimals",
+        "outputs": [{"name": "", "type": "uint8"}],
+        "type": "function",
+    }
+]
+
+# Cache decimals per (chain_id, lowercased token) — token decimals are immutable.
+_decimals_cache: Dict[tuple, int] = {}
+
+
+def get_token_decimals(chain_id: int, token_address: str) -> int:
+    """Query an ERC-20's ``decimals()`` (cached per chain + token)."""
+    key = (chain_id, token_address.lower())
+    if key in _decimals_cache:
+        return _decimals_cache[key]
+    w3 = get_w3(chain_id)
+    token = w3.eth.contract(
+        address=Web3.to_checksum_address(token_address), abi=_ERC20_DECIMALS_ABI
+    )
+    decimals = int(token.functions.decimals().call())
+    _decimals_cache[key] = decimals
+    return decimals
+
+
+def enforce_token_policy(
+    chain_id: int,
+    token_address: str,
+    amount: int,
+    *,
+    decimals: Optional[int] = None,
+    run_id: Optional[str] = None,
+) -> None:
+    """Protocol-layer ERC-20 notional gate (raises on a hard policy violation).
+
+    The broadcast chokepoint (``build_and_send_tx``) can only see *native*
+    value — ERC-20 amounts are hidden inside calldata. Protocol clients that
+    already know the token + amount call this to enforce ``max_amount`` against
+    the token notional *before* spending gas on approval/broadcast.
+
+    ``amount`` is in token base units and is converted to human units via the
+    token's ``decimals()``. A non-positive amount, or a "max uint" sentinel
+    (e.g. withdraw-all / repay-all), is skipped.
+    """
+    # Skip non-amounts and "max" sentinels (withdraw-all / repay-all).
+    if amount <= 0 or amount >= 2**255:
+        return
+    chain_name = _chain_name(chain_id)
+    run_id = run_id or _resolve_run_id()
+    if decimals is None:
+        decimals = get_token_decimals(chain_id, token_address)
+    human = str(Decimal(amount) / Decimal(10**decimals))
+    pol = _policy.load_policy()
+    result = _policy.check(pol, {"amount": human, "chain": chain_name})
+    if not result.allowed:
+        _audit.log_event(
+            event=_audit.EVENT_ERROR,
+            chain=chain_name,
+            run_id=run_id,
+            error_code="policy_rejected",
+            details={
+                "token": token_address,
+                "amount": human,
+                "violations": result.to_dict()["violations"],
+            },
+        )
+        raise RuntimeError(
+            "Policy rejected: " + "; ".join(v.message for v in result.violations)
+        )
+    if result.warnings:
+        _audit.log_event(
+            event=_audit.EVENT_PREFLIGHT,
+            chain=chain_name,
+            run_id=run_id,
+            details={
+                "stage": "token_policy",
+                "token": token_address,
+                "warnings": result.to_dict()["warnings"],
+            },
+        )
+
+
 def approve_token(
     chain_id: int,
     token_address: str,

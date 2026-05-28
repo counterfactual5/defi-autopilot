@@ -877,20 +877,71 @@ def cctp_status(ctx, run_id):
 @cctp.command("domains")
 @click.pass_context
 def cctp_domains(ctx):
-    """List CCTP-supported chains and their domain IDs."""
-    from defi_autopilot.protocols.cctp import CCTP_DOMAINS, USDC_ADDRESSES
+    """List CCTP-supported chains, domain IDs, and V1/V2 contract addresses."""
+    from defi_autopilot.protocols.cctp import (
+        CCTP_DOMAINS,
+        USDC_ADDRESSES,
+        TOKEN_MESSENGER,
+        TOKEN_MESSENGER_V2,
+    )
 
     table = Table(title="CCTP Supported Chains")
     table.add_column("Chain ID", style="cyan")
-    table.add_column("CCTP Domain", style="green")
+    table.add_column("Domain", style="green")
     table.add_column("USDC", style="yellow")
+    table.add_column("TokenMessenger V1", style="magenta")
+    table.add_column("TokenMessenger V2", style="blue")
     for chain_id in sorted(CCTP_DOMAINS):
         table.add_row(
             str(chain_id),
             str(CCTP_DOMAINS[chain_id]),
             USDC_ADDRESSES.get(chain_id, "—"),
+            TOKEN_MESSENGER.get(chain_id, "—"),
+            TOKEN_MESSENGER_V2.get(chain_id, "—"),
         )
     console.print(table)
+
+
+@cctp.command("doctor")
+@click.option("--to", "-t", "dest_chain", required=True, type=int, help="Destination chain ID")
+@click.option("--amount", "-a", required=True, type=int, help="USDC amount in base units (6 decimals)")
+@click.option("--wallet", "-w", type=str, default=None, help="Wallet to check (default: signer address)")
+@click.option("--v2", is_flag=True, default=False, help="Check against CCTP V2 contracts")
+@click.option("--fast/--standard", "fast", default=True, help="[V2] Fast Transfer (also checks fee endpoint)")
+@click.pass_context
+def cctp_doctor(ctx, dest_chain, amount, wallet, v2, fast):
+    """Preflight a CCTP transfer: route, RPC, USDC balance, approval, fee."""
+    from defi_autopilot.protocols.cctp import doctor as cctp_doctor_mod
+    from defi_autopilot.core.signer import get_address
+
+    src_chain = ctx.obj["chain_id"]
+
+    if wallet is None:
+        try:
+            wallet = get_address()
+        except Exception:
+            console.print("[red]No --wallet given and no signer key available.[/red]")
+            console.print("Pass --wallet 0x... to check balance/allowance without a key.")
+            sys.exit(1)
+
+    report = cctp_doctor_mod.run_doctor(
+        src_chain, dest_chain, amount, wallet, v2=v2, fast=fast
+    )
+
+    table = Table(title=f"CCTP {report['version']} Doctor — chain {src_chain} → {dest_chain}")
+    table.add_column("Check", style="cyan")
+    table.add_column("Status", style="green")
+    table.add_column("Detail", style="yellow")
+    for check in report["checks"]:
+        status = "[green]PASS[/green]" if check["ok"] else "[red]FAIL[/red]"
+        table.add_row(check["name"], status, check["detail"])
+    console.print(table)
+
+    if report["ok"]:
+        console.print("[green]All checks passed — transfer should go through.[/green]")
+    else:
+        console.print("[red]One or more checks failed — fix before transferring.[/red]")
+        sys.exit(1)
 
 
 # ============================================================

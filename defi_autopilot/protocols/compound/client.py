@@ -17,7 +17,12 @@ from web3 import Web3
 
 from defi_autopilot.core.rpc import get_w3, get_chain_config
 from defi_autopilot.core.signer import get_address
-from defi_autopilot.core.tx import build_and_send_tx, check_allowance, approve_token
+from defi_autopilot.core.tx import (
+    build_and_send_tx,
+    check_allowance,
+    approve_token,
+    enforce_token_policy,
+)
 
 
 # Comet ABI (core functions)
@@ -224,6 +229,9 @@ class CompoundV3Client:
         signer_addr = get_address(private_key)
         base_token = self._market["base_token"]
 
+        # ERC-20 notional gate (chokepoint only sees native value).
+        enforce_token_policy(self.chain_id, base_token, amount)
+
         allowance = check_allowance(self.chain_id, base_token, signer_addr, self._comet_addr)
         if allowance < amount:
             approve_token(self.chain_id, base_token, self._comet_addr, 2**256 - 1, private_key)
@@ -276,6 +284,9 @@ class CompoundV3Client:
                 f"Available: {list(self._market['collaterals'].keys())}"
             )
 
+        # ERC-20 notional gate (chokepoint only sees native value).
+        enforce_token_policy(self.chain_id, asset_addr, amount)
+
         allowance = check_allowance(self.chain_id, asset_addr, signer_addr, self._comet_addr)
         if allowance < amount:
             approve_token(self.chain_id, asset_addr, self._comet_addr, 2**256 - 1, private_key)
@@ -327,6 +338,10 @@ class CompoundV3Client:
         Equivalent to withdraw(baseToken, amount) when you have no supply.
         """
         base_token = self._market["base_token"]
+
+        # ERC-20 notional gate (chokepoint only sees native value).
+        enforce_token_policy(self.chain_id, base_token, amount)
+
         data = self._comet.encode_abi(
             "withdraw",
             [Web3.to_checksum_address(base_token), amount],

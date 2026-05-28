@@ -15,7 +15,12 @@ from web3 import Web3
 
 from defi_autopilot.core.rpc import get_w3, get_chain_config
 from defi_autopilot.core.signer import get_address
-from defi_autopilot.core.tx import build_and_send_tx, check_allowance, approve_token
+from defi_autopilot.core.tx import (
+    build_and_send_tx,
+    check_allowance,
+    approve_token,
+    enforce_token_policy,
+)
 
 
 # Aave V3 Pool ABI (core functions only)
@@ -187,6 +192,9 @@ class AaveV3Client:
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
 
+        # ERC-20 notional gate (chokepoint only sees native value).
+        enforce_token_policy(self.chain_id, asset, amount)
+
         # Check and handle approval (approve aToken)
         self.pool.functions.getReserveData(
             Web3.to_checksum_address(asset)
@@ -267,6 +275,9 @@ class AaveV3Client:
         """Borrow assets from Aave V3 pool."""
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
+
+        # ERC-20 notional gate (chokepoint only sees native value).
+        enforce_token_policy(self.chain_id, asset, amount)
 
         data = self.pool.encode_abi(
             "borrow",
