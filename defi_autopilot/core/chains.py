@@ -40,6 +40,7 @@ _DEFAULT_RPCS: Dict[int, str] = {
     42161: "https://arb1.arbitrum.io/rpc",
     10: "https://mainnet.optimism.io",
     137: "https://polygon-rpc.com",
+    130: "https://mainnet.unichain.org",
 }
 
 
@@ -96,5 +97,12 @@ CHAIN_PRESETS: Dict[int, ChainConfig] = {
         rpc_url=_get_rpc_url(137),
         explorer_url="https://polygonscan.com",
         native_token="MATIC",
+    ),
+    130: ChainConfig(
+        chain_id=130,
+        name="Unichain",
+        rpc_url=_get_rpc_url(130),
+        explorer_url="https://uniscan.xyz",
+        native_token="ETH",
     ),
 }
