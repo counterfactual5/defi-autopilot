@@ -29,7 +29,7 @@ defi-autopilot/
 │   │   ├── lido/          # Lido (liquid staking)
 │   │   ├── compound/      # Compound V3 (lending)
 │   │   ├── curve/         # Curve Finance (DEX)
-│   │   └── cctp/          # Circle CCTP (cross-chain USDC, resumable)
+│   │   └── cctp/          # Circle CCTP — V1 + V2 (cross-chain USDC, resumable)
 │   └── cli.py             # Click CLI entry point
 └── tests/
 ```
@@ -46,7 +46,7 @@ defi-autopilot/
 | **Lido** | Liquid Staking | Ethereum, Base, Arbitrum, Optimism, Polygon | stake ETH, wrap/unwrap stETH/wstETH |
 | **Compound V3** | Lending | Ethereum, Base, Arbitrum, Polygon | supply, withdraw, supplyCollateral, borrow, repay |
 | **Curve** | Stablecoin DEX | Ethereum, Base, Arbitrum, Optimism | swap, add/remove liquidity, quote |
-| **Circle CCTP** | Cross-chain USDC bridge | Ethereum, Optimism, Arbitrum, Base, Polygon, Unichain, Avalanche | transfer (burn→attest→mint), resumable |
+| **Circle CCTP** | Cross-chain USDC bridge | Ethereum, Optimism, Arbitrum, Base, Polygon, Unichain, Avalanche | transfer (burn→attest→mint), resumable; **V1** (default) + **V2** (Fast/Standard) |
 
 ## Quick Start
 
@@ -130,6 +130,11 @@ defi cctp status --run-id move-usdc-1                 # inspect checkpoint
 # never re-burning.
 defi -c 8453 cctp transfer --to 42161 --amount 10000000 --run-id move-usdc-1
 
+# CCTP V2 — Fast Transfer (~seconds, small fee; max fee auto-fetched from Circle)
+defi -c 8453 cctp transfer --v2 --fast --to 42161 --amount 10000000 --run-id fast-1
+# CCTP V2 — Standard Transfer (hard finality, usually fee-free)
+defi -c 8453 cctp transfer --v2 --standard --to 42161 --amount 10000000 --run-id std-1
+
 # --- General ---
 defi -c 1 morpho position --market ...  # specify chain
 defi --dry-run morpho supply ...         # simulate only
@@ -164,7 +169,7 @@ quote = inch.get_quote(
     amount=1000000000,
 )
 
-# Circle CCTP — native cross-chain USDC, resumable via state machine
+# Circle CCTP V1 — native cross-chain USDC, resumable via state machine
 from defi_autopilot.protocols.cctp import CCTPClient
 
 cctp = CCTPClient(8453)  # source = Base
@@ -174,6 +179,18 @@ result = cctp.transfer(
     run_id="move-usdc-1",     # re-run with same id to resume after a crash
 )
 # {"status": "completed", "burn_tx": ..., "mint_tx": ...}
+
+# Circle CCTP V2 — Fast Transfer (~seconds) or Standard (hard finality)
+from defi_autopilot.protocols.cctp import CCTPv2Client
+
+cctp_v2 = CCTPv2Client(8453)
+result = cctp_v2.transfer(
+    amount=10_000_000,
+    dest_chain_id=42161,
+    fast=True,                # Fast Transfer; max_fee auto-fetched from Circle
+    run_id="fast-1",
+)
+# {"status": "completed", "version": "v2", "burn_tx": ..., "mint_tx": ..., "max_fee": ...}
 ```
 
 ## 🛠️ Development
@@ -195,7 +212,7 @@ uv run pytest tests/ -v
 - [x] 1inch DEX aggregation
 - [x] Multi-chain (Base, Ethereum, Arbitrum, Optimism, Polygon)
 - [x] Compound V3 integration
-- [x] Circle CCTP cross-chain USDC (resumable burn & mint)
+- [x] Circle CCTP cross-chain USDC (resumable burn & mint) — V1 + V2 (Fast/Standard)
 - [ ] Uniswap V3/V4 LP management
 - [ ] Strategy automation (auto-compound, yield optimization)
 - [ ] Position monitoring & alerting

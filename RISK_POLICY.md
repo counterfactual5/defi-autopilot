@@ -169,6 +169,20 @@ defi -c 8453 cctp transfer --to 42161 --amount 10000000 --run-id move-usdc-1
 defi cctp status --run-id move-usdc-1   # should show current_state + burn/mint tx
 ```
 
+**V1 vs V2 — both gated identically.** `CCTPClient` (V1) and `CCTPv2Client`
+(V2) are independent integrations (different contracts, different attestation
+APIs) but run through the *same* policy gate, state machine, and audit layer.
+V2 adds a transfer-speed dimension:
+
+- `--fast` (`minFinalityThreshold = 1000`): attestation in seconds for a small
+  variable fee. The fee cap (`maxFee`, USDC base units) is auto-fetched from
+  Circle's `/v2/burn/USDC/fees` endpoint unless you pass `--max-fee`.
+- `--standard` (`minFinalityThreshold = 2000`): waits for hard finality,
+  usually fee-free.
+- V2 run-ids are prefixed `cctpv2-`, so V1 and V2 checkpoints never collide.
+  The policy check (`max_amount` on USDC notional, chain, recipient) is
+  identical across both versions.
+
 ## Troubleshooting
 
 ### "policy_rejected" in audit log
