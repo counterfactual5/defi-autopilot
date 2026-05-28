@@ -249,7 +249,7 @@ class CCTPClient:
         Returns the attestation hex string suitable for ``receiveMessage``.
         Raises ``TimeoutError`` if not ready within ``timeout`` seconds.
         """
-        url = f"{api_base}/attestations/{message_hash}"
+        url = f"{api_base}/v1/attestations/{message_hash}"
         deadline = time.time() + timeout
         while time.time() < deadline:
             try:
