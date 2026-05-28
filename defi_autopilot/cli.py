@@ -763,6 +763,115 @@ def curve_pools(ctx):
 
 
 # ============================================================
+# CCTP Commands (Circle cross-chain USDC)
+# ============================================================
+
+@cli.group()
+def cctp():
+    """Circle CCTP — native cross-chain USDC transfers (burn & mint)"""
+    pass
+
+
+@cctp.command("transfer")
+@click.option("--to", "-t", "dest_chain", required=True, type=int, help="Destination chain ID")
+@click.option("--amount", "-a", required=True, type=int, help="USDC amount in base units (6 decimals; 1 USDC = 1_000_000)")
+@click.option("--recipient", "-r", type=str, default=None, help="Mint recipient (default: signer address)")
+@click.option("--run-id", type=str, default=None, help="Run ID for resumable transfer (auto-generated if omitted)")
+@click.option("--attestation-timeout", type=int, default=1200, help="Max seconds to wait for Circle attestation")
+@click.pass_context
+def cctp_transfer(ctx, dest_chain, amount, recipient, run_id, attestation_timeout):
+    """Burn USDC on the source chain and mint it on the destination chain.
+
+    Resumable: re-run with the same --run-id after an interruption to continue
+    from attestation/mint without re-burning.
+    """
+    from defi_autopilot.protocols.cctp import CCTPClient, CCTP_DOMAINS
+
+    src_chain = ctx.obj["chain_id"]
+    if src_chain not in CCTP_DOMAINS:
+        console.print(f"[red]CCTP unsupported on source chain {src_chain}[/red]")
+        console.print(f"Supported: {sorted(CCTP_DOMAINS)}")
+        sys.exit(1)
+    if dest_chain not in CCTP_DOMAINS:
+        console.print(f"[red]CCTP unsupported on destination chain {dest_chain}[/red]")
+        console.print(f"Supported: {sorted(CCTP_DOMAINS)}")
+        sys.exit(1)
+
+    client = CCTPClient(src_chain)
+    console.print(
+        f"[cyan]CCTP transfer {amount} USDC base units: "
+        f"chain {src_chain} → chain {dest_chain}[/cyan]"
+    )
+
+    if ctx.obj["dry_run"]:
+        console.print("[yellow]DRY RUN — no transaction sent[/yellow]")
+        console.print(f"  source domain: {CCTP_DOMAINS[src_chain]}  dest domain: {CCTP_DOMAINS[dest_chain]}")
+        console.print(f"  burn USDC: {client.usdc}")
+        console.print(f"  TokenMessenger: {client.token_messenger}")
+        return
+
+    try:
+        result = client.transfer(
+            amount=amount,
+            dest_chain_id=dest_chain,
+            mint_recipient=recipient,
+            run_id=run_id,
+            attestation_timeout=attestation_timeout,
+        )
+    except Exception as exc:
+        console.print(f"[red]CCTP transfer failed: {exc}[/red]")
+        sys.exit(1)
+
+    console.print(f"[green]CCTP transfer {result['status']}[/green]")
+    console.print(f"  run_id: {result['run_id']}")
+    console.print(f"  burn tx: {result.get('burn_tx')}")
+    console.print(f"  mint tx: {result.get('mint_tx')}")
+
+
+@cctp.command("status")
+@click.option("--run-id", required=True, type=str, help="Run ID to inspect")
+@click.pass_context
+def cctp_status(ctx, run_id):
+    """Show the state-machine checkpoint for a CCTP transfer."""
+    from defi_autopilot import state_machine
+
+    s = state_machine.load_state(run_id)
+    if s is None:
+        console.print(f"[yellow]No state found for run {run_id}[/yellow]")
+        return
+
+    payload = s.get("payload", {})
+    table = Table(title=f"CCTP Run — {run_id}")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+    table.add_row("Current state", s.get("current_state", "?"))
+    table.add_row("Updated at", s.get("updated_at", "?"))
+    table.add_row("Burn tx", str(payload.get("burn_tx")))
+    table.add_row("Mint tx", str(payload.get("mint_tx")))
+    table.add_row("Message hash", str(payload.get("message_hash")))
+    console.print(table)
+
+
+@cctp.command("domains")
+@click.pass_context
+def cctp_domains(ctx):
+    """List CCTP-supported chains and their domain IDs."""
+    from defi_autopilot.protocols.cctp import CCTP_DOMAINS, USDC_ADDRESSES
+
+    table = Table(title="CCTP Supported Chains")
+    table.add_column("Chain ID", style="cyan")
+    table.add_column("CCTP Domain", style="green")
+    table.add_column("USDC", style="yellow")
+    for chain_id in sorted(CCTP_DOMAINS):
+        table.add_row(
+            str(chain_id),
+            str(CCTP_DOMAINS[chain_id]),
+            USDC_ADDRESSES.get(chain_id, "—"),
+        )
+    console.print(table)
+
+
+# ============================================================
 # Utility Commands
 # ============================================================
 
@@ -811,6 +920,10 @@ def list_markets(ctx):
 
     for chain_id in LIDO_ADDRESSES:
         table.add_row("Lido", "stETH/wstETH", "Liquid Staking", f"Chain {chain_id}")
+
+    from defi_autopilot.protocols.cctp import CCTP_DOMAINS
+    for chain_id in sorted(CCTP_DOMAINS):
+        table.add_row("Circle CCTP", "USDC", "Cross-chain bridge", f"Chain {chain_id}")
 
     console.print(table)
 

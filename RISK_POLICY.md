@@ -139,6 +139,36 @@ resumable per-operation state, gate it at the CLI-command layer with a distinct
 To cap ERC-20 notionals, pass the amount/token explicitly at the protocol-client
 layer (future enhancement) rather than relying on the chokepoint.
 
+#### CCTP — the exception that *does* use a state machine
+
+`defi cctp transfer` is the one operation that gates per-logical-operation with
+its own `run_id`, exactly as suggested above. A cross-chain USDC transfer is
+three steps across two chains (burn → off-chain attestation → mint), so it is
+the canonical resumable workflow:
+
+| State | Meaning |
+|-------|---------|
+| `preflight` | Policy gate evaluated (USDC amount, chain, recipient) |
+| `signed`/`broadcast` | USDC burned on source chain; `message` + `message_hash` checkpointed |
+| `confirmed` | Mint succeeded on destination chain |
+
+- **USDC amount *is* policy-checked here** (unlike the bare chokepoint), because
+  the CCTP layer knows the token and amount. `max_amount` applies to the USDC
+  notional (human units, 6 decimals).
+- **Anti-replay:** once `broadcast` holds the message, a re-run with the same
+  `run_id` skips the burn and resumes at attestation/mint. A `confirmed` run
+  returns idempotently (`status: already_completed`).
+- **Only re-burn window:** a crash between the on-chain burn send and the
+  checkpoint write — the same unavoidable window every autopilot shares.
+- Burn and mint each still pass through `build_and_send_tx`, so the chokepoint
+  policy + audit layers fire too; all audit lines share one `run_id`.
+
+```bash
+# Resume drill: kill the process mid-transfer, then re-run the identical command.
+defi -c 8453 cctp transfer --to 42161 --amount 10000000 --run-id move-usdc-1
+defi cctp status --run-id move-usdc-1   # should show current_state + burn/mint tx
+```
+
 ## Troubleshooting
 
 ### "policy_rejected" in audit log

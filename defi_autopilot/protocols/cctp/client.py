@@ -124,6 +124,11 @@ MESSAGE_TRANSMITTER_ABI = [
 ]
 
 
+def _hex0x(value: str) -> str:
+    """Normalise a hex string to a single ``0x`` prefix."""
+    return value if value.startswith("0x") else "0x" + value
+
+
 def address_to_bytes32(addr: str) -> bytes:
     """Left-pad a 20-byte EVM address to 32 bytes (CCTP mintRecipient format)."""
     return bytes(12) + bytes.fromhex(Web3.to_checksum_address(addr)[2:])
@@ -225,11 +230,9 @@ class CCTPClient:
             raise RuntimeError(
                 f"No MessageSent event in burn tx {burn_tx}; cannot fetch attestation"
             )
-        message_bytes = events[0]["args"]["message"]
-        message_hash = Web3.keccak(message_bytes).hex()
-        message_hex = "0x" + message_bytes.hex()
-        if not message_hash.startswith("0x"):
-            message_hash = "0x" + message_hash
+        message_bytes = bytes(events[0]["args"]["message"])
+        message_hex = _hex0x(message_bytes.hex())
+        message_hash = _hex0x(Web3.keccak(message_bytes).hex())
         return message_hex, message_hash
 
     # ── Step 2: fetch attestation (off-chain) ────────────────────────────────
@@ -315,14 +318,31 @@ class CCTPClient:
         chain_name = self.config.name.lower()
         human_amount = str(Decimal(amount) / Decimal(10**USDC_DECIMALS))
 
+        # Idempotent: a finished transfer just returns its recorded result.
+        existing = state_machine.load_state(run_id)
+        if existing and existing.get("current_state") == state_machine.STATE_CONFIRMED:
+            p = existing.get("payload", {})
+            return {
+                "run_id": run_id,
+                "status": "already_completed",
+                "src_chain_id": self.chain_id,
+                "dest_chain_id": dest_chain_id,
+                "amount": amount,
+                "burn_tx": p.get("burn_tx"),
+                "mint_tx": p.get("mint_tx"),
+                "message_hash": p.get("message_hash"),
+            }
+
         action = state_machine.next_action(run_id)
         if action is None:
-            raise RuntimeError(f"run {run_id} is in terminal state — cannot proceed")
+            raise RuntimeError(
+                f"run {run_id} is in a terminal state (failed/cancelled) — cannot proceed"
+            )
 
-        # ── PREFLIGHT + policy gate ──
+        # ── PREFLIGHT + policy gate (fresh runs only; skipped on resume) ──
+        recipient = mint_recipient or get_address(private_key)
         if action == state_machine.STATE_PREFLIGHT:
             pol = _policy.load_policy()
-            recipient = mint_recipient or get_address(private_key)
             result = _policy.check(pol, {
                 "amount": human_amount,
                 "chain": chain_name,
@@ -341,14 +361,25 @@ class CCTPClient:
                 raise RuntimeError(
                     "Policy rejected: " + "; ".join(v.message for v in result.violations)
                 )
+            if result.warnings:
+                _audit.log_event(
+                    event=_audit.EVENT_PREFLIGHT, chain=chain_name, wallet=recipient,
+                    run_id=run_id,
+                    details={"stage": "policy", "warnings": result.to_dict()["warnings"]},
+                )
             state_machine.transition(
                 run_id, state_machine.STATE_PREFLIGHT,
                 payload={"src": self.chain_id, "dest": dest_chain_id, "amount": amount},
             )
 
-        # ── burn (skip if already broadcast) ──
-        action = state_machine.next_action(run_id)
-        if action in (state_machine.STATE_SIGNED,):
+        # ── burn (gated on whether the message has been persisted) ──
+        # Anti-replay: once the BROADCAST checkpoint holds the message, a resume
+        # never re-burns. The only re-burn window is a crash between the on-chain
+        # send and the checkpoint write — the same narrow window as every other
+        # autopilot, and unavoidable without an RPC-level idempotency key.
+        saved = state_machine.load_state(run_id) or {}
+        payload = saved.get("payload", {})
+        if not payload.get("message"):
             state_machine.transition(run_id, state_machine.STATE_SIGNED)
             burn = self.burn(amount, dest_chain_id, mint_recipient, private_key)
             state_machine.transition(
@@ -360,9 +391,9 @@ class CCTPClient:
                     "dest": dest_chain_id,
                 },
             )
-        # Recover persisted burn data (covers both fresh + resumed runs).
-        saved = state_machine.load_state(run_id) or {}
-        payload = saved.get("payload", {})
+            saved = state_machine.load_state(run_id) or {}
+            payload = saved.get("payload", {})
+
         message = payload.get("message")
         message_hash = payload.get("message_hash")
         burn_tx = payload.get("burn_tx")
@@ -371,7 +402,7 @@ class CCTPClient:
                 f"run {run_id}: missing burn message in state — cannot continue"
             )
 
-        # ── attestation + mint ──
+        # ── attestation (off-chain wait) + mint on destination chain ──
         attestation = self.get_attestation(message_hash, timeout=attestation_timeout)
         mint = self.mint(dest_chain_id, message, attestation, private_key)
         state_machine.transition(
