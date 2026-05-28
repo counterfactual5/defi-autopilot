@@ -21,6 +21,7 @@ Reference: https://developers.circle.com/cctp (V1 legacy interface)
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 import uuid
@@ -37,6 +38,8 @@ from defi_autopilot import state_machine
 from defi_autopilot.core.rpc import get_chain_config, get_w3
 from defi_autopilot.core.signer import get_address
 from defi_autopilot.core.tx import approve_token, build_and_send_tx, check_allowance
+
+_log = logging.getLogger(__name__)
 
 
 # ── CCTP domain mapping (chain_id → CCTP domain id) ──────────────────────────
@@ -251,19 +254,38 @@ class CCTPClient:
         """
         url = f"{api_base}/v1/attestations/{message_hash}"
         deadline = time.time() + timeout
+        last_status: Optional[str] = None
         while time.time() < deadline:
             try:
                 resp = httpx.get(url, timeout=30)
-            except httpx.HTTPError:
+            except httpx.HTTPError as exc:
+                _log.warning("CCTP V1 attestation poll error (%s); retrying", exc)
+                time.sleep(poll_interval)
+                continue
+            if resp.status_code == 429:
+                _log.warning("CCTP attestation rate-limited (429); backing off")
+                time.sleep(max(poll_interval, 5.0))
+                continue
+            if resp.status_code == 404:
+                if last_status != "not_found":
+                    _log.info("CCTP V1 attestation not yet observed for %s", message_hash)
+                    last_status = "not_found"
                 time.sleep(poll_interval)
                 continue
             if resp.status_code == 200:
                 body = resp.json()
-                if body.get("status") == "complete" and body.get("attestation"):
+                status = body.get("status")
+                if status != last_status:
+                    _log.info(
+                        "CCTP V1 attestation status=%s for %s", status, message_hash
+                    )
+                    last_status = status
+                if status == "complete" and body.get("attestation"):
                     return body["attestation"]
             time.sleep(poll_interval)
         raise TimeoutError(
-            f"Attestation for {message_hash} not ready within {timeout}s"
+            f"Attestation for {message_hash} not ready within {timeout}s "
+            f"(last status: {last_status})"
         )
 
     # ── Step 3: mint on destination chain ────────────────────────────────────

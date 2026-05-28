@@ -23,7 +23,12 @@ from web3 import Web3
 
 from defi_autopilot.core.rpc import get_w3, get_chain_config
 from defi_autopilot.core.signer import get_address
-from defi_autopilot.core.tx import build_and_send_tx, check_allowance, approve_token
+from defi_autopilot.core.tx import (
+    build_and_send_tx,
+    check_allowance,
+    approve_token,
+    enforce_token_policy,
+)
 
 # Morpho Blue core contract ABI (abbreviated, covers all operations)
 MORPHO_BLUE_ABI = [
@@ -300,6 +305,9 @@ class MorphoClient:
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
 
+        # ERC-20 notional gate (chokepoint only sees native value).
+        enforce_token_policy(self.chain_id, market.loan_token, amount)
+
         # Check and handle approval (use max approve to save gas on future txs)
         if not skip_approval:
             allowance = check_allowance(
@@ -334,6 +342,9 @@ class MorphoClient:
         """Deposit collateral"""
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
+
+        # ERC-20 notional gate (chokepoint only sees native value).
+        enforce_token_policy(self.chain_id, market.collateral_token, amount)
 
         # Check approval
         allowance = check_allowance(
@@ -370,6 +381,9 @@ class MorphoClient:
         signer_addr = get_address(private_key)
         on_behalf = on_behalf or signer_addr
         receiver = receiver or signer_addr
+
+        # ERC-20 notional gate (chokepoint only sees native value).
+        enforce_token_policy(self.chain_id, market.loan_token, amount)
 
         data = self.contract.encode_abi(
             "borrow",
