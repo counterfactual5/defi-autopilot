@@ -215,9 +215,14 @@ class AaveV3Client:
         # Set as collateral in a separate tx (after supply succeeds)
         if use_as_collateral:
             try:
-                self._set_collateral(asset, True, private_key)
-            except Exception:
-                pass  # May already be collateralized
+                collateral_result = self._set_collateral(asset, True, private_key)
+                result["collateral_tx"] = collateral_result
+            except Exception as exc:
+                # Keep supply success but expose collateral-toggle failure to callers.
+                result["collateral_warning"] = (
+                    "supply succeeded but setUserUseReserveAsCollateral failed: "
+                    f"{exc}"
+                )
 
         return result
 
