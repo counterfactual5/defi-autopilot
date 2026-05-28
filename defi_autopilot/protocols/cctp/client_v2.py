@@ -28,7 +28,6 @@ Reference: https://developers.circle.com/cctp (V2 interface)
 
 from __future__ import annotations
 
-import math
 import os
 import time
 import uuid
@@ -53,6 +52,13 @@ from .client import (
     USDC_DECIMALS,
     address_to_bytes32,
 )
+
+# One USDC cent (0.01 USDC) expressed in USDC base units (6 decimals).
+_CENTS_TO_SUBUNITS = 10_000
+
+# Buffer above the minimum fee to absorb short-term fluctuations (20%).
+_FEE_BUFFER_NUMERATOR = 120
+_FEE_BUFFER_DENOMINATOR = 100
 
 
 # ── V2 contracts (CREATE2 — same address on every supported mainnet) ─────────
@@ -147,9 +153,10 @@ class CCTPv2Client:
         dest_chain_id: int,
         api_base: str = ATTESTATION_API_V2,
     ) -> Dict[int, int]:
-        """Return ``{finalityThreshold: minimumFeeBps}`` for src→dest.
+        """Return ``{finalityThreshold: minimumFee}`` for src→dest.
 
-        ``minimumFee`` is expressed in basis points of the transfer amount.
+        ``minimumFee`` is expressed in USDC cents (1 cent = 0.01 USDC).
+        Multiply by 10_000 to convert to USDC base units (6 decimals).
         """
         dest_domain = CCTP_DOMAINS[dest_chain_id]
         url = f"{api_base}/v2/burn/USDC/fees/{self.domain}/{dest_domain}"
@@ -163,28 +170,31 @@ class CCTPv2Client:
 
     def _resolve_max_fee(
         self,
-        amount: int,
         dest_chain_id: int,
         fast: bool,
         explicit_max_fee: Optional[int],
     ) -> int:
-        """Compute the maxFee (in USDC base units) to pass to depositForBurn."""
+        """Compute the maxFee (in USDC base units) to pass to depositForBurn.
+
+        Follows the official conversion:
+        ``feeSubunits = minimumFee_cents × 10_000``
+        plus a 20% buffer to handle fee fluctuations.
+        """
         if explicit_max_fee is not None:
             return explicit_max_fee
         if not fast:
-            # Standard transfers are typically fee-free (minimumFee == 0).
             return 0
-        threshold = FINALITY_FAST
         try:
             fees = self.get_fees(dest_chain_id)
         except httpx.HTTPError:
-            # Network unavailable — caller must pass --max-fee explicitly.
             raise RuntimeError(
                 "Could not fetch CCTP V2 fees; pass an explicit max_fee for Fast Transfer"
             )
-        bps = fees.get(threshold, 0)
-        # Ceil so we never under-pay the minimum required fee.
-        return math.ceil(amount * bps / 10_000)
+        cents = fees.get(FINALITY_FAST, 0)
+        # cents → USDC base units (6 decimals): 1 cent = 10_000 subunits.
+        fee_subunits = cents * _CENTS_TO_SUBUNITS
+        # Add 20% buffer per Circle recommendation.
+        return (fee_subunits * _FEE_BUFFER_NUMERATOR) // _FEE_BUFFER_DENOMINATOR
 
     # ── Step 1: burn ─────────────────────────────────────────────────────────
 
@@ -390,7 +400,7 @@ class CCTPv2Client:
         saved = state_machine.load_state(run_id) or {}
         payload = saved.get("payload", {})
         if not payload.get("burn_tx"):
-            resolved_fee = self._resolve_max_fee(amount, dest_chain_id, fast, max_fee)
+            resolved_fee = self._resolve_max_fee(dest_chain_id, fast, max_fee)
             state_machine.transition(run_id, state_machine.STATE_SIGNED)
             burn = self.burn(
                 amount, dest_chain_id, resolved_fee, mint_recipient, fast, private_key

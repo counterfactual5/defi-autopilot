@@ -24,12 +24,10 @@ from defi_autopilot.protocols.cctp import client_v2 as v2
 
 class TestStaticData:
     def test_v2_addresses_are_create2_uniform(self):
-        # Same address on every supported chain (CREATE2 deployment).
         assert set(v2.TOKEN_MESSENGER_V2.values()) == {v2.TOKEN_MESSENGER_V2_ADDRESS}
         assert set(v2.MESSAGE_TRANSMITTER_V2.values()) == {v2.MESSAGE_TRANSMITTER_V2_ADDRESS}
 
     def test_v2_distinct_from_v1(self):
-        # V1 and V2 must not collide on contract addresses.
         assert v2.TOKEN_MESSENGER_V2_ADDRESS not in cctp.TOKEN_MESSENGER.values()
         assert v2.MESSAGE_TRANSMITTER_V2_ADDRESS not in cctp.MESSAGE_TRANSMITTER.values()
 
@@ -80,18 +78,25 @@ def _permissive_env(tmp: str) -> dict:
 class TestMaxFeeResolution:
     def test_standard_is_free(self):
         client = _fake_client()
-        assert client._resolve_max_fee(1_000_000, 42161, fast=False, explicit_max_fee=None) == 0
+        assert client._resolve_max_fee(42161, fast=False, explicit_max_fee=None) == 0
 
     def test_explicit_fee_wins(self):
         client = _fake_client()
-        assert client._resolve_max_fee(1_000_000, 42161, fast=True, explicit_max_fee=42) == 42
+        assert client._resolve_max_fee(42161, fast=True, explicit_max_fee=42) == 42
 
-    def test_fast_fee_from_bps(self):
+    def test_fast_fee_from_cents(self):
         client = _fake_client()
-        # 1 bps of 1_000_000 = 100 base units.
+        # API returns minimumFee=1 (1 USDC cent = 0.01 USDC).
+        # Expected: 1 cent * 10_000 subunits/cent * 1.2 buffer = 12_000.
         client.get_fees = mock.MagicMock(return_value={v2.FINALITY_FAST: 1, v2.FINALITY_STANDARD: 0})
-        fee = client._resolve_max_fee(1_000_000, 42161, fast=True, explicit_max_fee=None)
-        assert fee == 100
+        fee = client._resolve_max_fee(42161, fast=True, explicit_max_fee=None)
+        assert fee == 12_000  # 1 * 10_000 * 120 // 100
+
+    def test_fast_fee_zero_cents(self):
+        client = _fake_client()
+        client.get_fees = mock.MagicMock(return_value={v2.FINALITY_FAST: 0})
+        fee = client._resolve_max_fee(42161, fast=True, explicit_max_fee=None)
+        assert fee == 0
 
 
 # ── Attestation (single /v2/messages call) ────────────────────────────────────
@@ -140,7 +145,7 @@ class TestTransferHappyPath:
                         amount=1_000_000,
                         dest_chain_id=42161,
                         mint_recipient="0x000000000000000000000000000000000000bEEF",
-                        fast=False,  # standard → no fee API call
+                        fast=False,
                         run_id="cctpv2-happy",
                     )
 
