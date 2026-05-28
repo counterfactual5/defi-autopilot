@@ -778,14 +778,19 @@ def cctp():
 @click.option("--recipient", "-r", type=str, default=None, help="Mint recipient (default: signer address)")
 @click.option("--run-id", type=str, default=None, help="Run ID for resumable transfer (auto-generated if omitted)")
 @click.option("--attestation-timeout", type=int, default=1200, help="Max seconds to wait for Circle attestation")
+@click.option("--v2", is_flag=True, default=False, help="Use CCTP V2 (Fast/Standard transfers). Default is V1.")
+@click.option("--fast/--standard", "fast", default=True, help="[V2 only] Fast Transfer (seconds, small fee) vs Standard (finality, free)")
+@click.option("--max-fee", type=int, default=None, help="[V2 Fast only] Max fee in USDC base units; auto-fetched from Circle if omitted")
 @click.pass_context
-def cctp_transfer(ctx, dest_chain, amount, recipient, run_id, attestation_timeout):
+def cctp_transfer(ctx, dest_chain, amount, recipient, run_id, attestation_timeout, v2, fast, max_fee):
     """Burn USDC on the source chain and mint it on the destination chain.
 
     Resumable: re-run with the same --run-id after an interruption to continue
     from attestation/mint without re-burning.
+
+    Defaults to CCTP V1. Pass --v2 for Fast/Standard transfers (V2).
     """
-    from defi_autopilot.protocols.cctp import CCTPClient, CCTP_DOMAINS
+    from defi_autopilot.protocols.cctp import CCTPClient, CCTPv2Client, CCTP_DOMAINS
 
     src_chain = ctx.obj["chain_id"]
     if src_chain not in CCTP_DOMAINS:
@@ -797,9 +802,11 @@ def cctp_transfer(ctx, dest_chain, amount, recipient, run_id, attestation_timeou
         console.print(f"Supported: {sorted(CCTP_DOMAINS)}")
         sys.exit(1)
 
-    client = CCTPClient(src_chain)
+    version = "v2" if v2 else "v1"
+    client = CCTPv2Client(src_chain) if v2 else CCTPClient(src_chain)
+    speed = (" fast" if fast else " standard") if v2 else ""
     console.print(
-        f"[cyan]CCTP transfer {amount} USDC base units: "
+        f"[cyan]CCTP {version}{speed} transfer {amount} USDC base units: "
         f"chain {src_chain} → chain {dest_chain}[/cyan]"
     )
 
@@ -808,24 +815,39 @@ def cctp_transfer(ctx, dest_chain, amount, recipient, run_id, attestation_timeou
         console.print(f"  source domain: {CCTP_DOMAINS[src_chain]}  dest domain: {CCTP_DOMAINS[dest_chain]}")
         console.print(f"  burn USDC: {client.usdc}")
         console.print(f"  TokenMessenger: {client.token_messenger}")
+        if v2:
+            console.print(f"  speed: {'Fast' if fast else 'Standard'}  max_fee: {max_fee if max_fee is not None else 'auto'}")
         return
 
     try:
-        result = client.transfer(
-            amount=amount,
-            dest_chain_id=dest_chain,
-            mint_recipient=recipient,
-            run_id=run_id,
-            attestation_timeout=attestation_timeout,
-        )
+        if v2:
+            result = client.transfer(
+                amount=amount,
+                dest_chain_id=dest_chain,
+                mint_recipient=recipient,
+                fast=fast,
+                max_fee=max_fee,
+                run_id=run_id,
+                attestation_timeout=attestation_timeout,
+            )
+        else:
+            result = client.transfer(
+                amount=amount,
+                dest_chain_id=dest_chain,
+                mint_recipient=recipient,
+                run_id=run_id,
+                attestation_timeout=attestation_timeout,
+            )
     except Exception as exc:
         console.print(f"[red]CCTP transfer failed: {exc}[/red]")
         sys.exit(1)
 
-    console.print(f"[green]CCTP transfer {result['status']}[/green]")
+    console.print(f"[green]CCTP {version} transfer {result['status']}[/green]")
     console.print(f"  run_id: {result['run_id']}")
     console.print(f"  burn tx: {result.get('burn_tx')}")
     console.print(f"  mint tx: {result.get('mint_tx')}")
+    if v2 and result.get("max_fee") is not None:
+        console.print(f"  max fee: {result['max_fee']} USDC base units")
 
 
 @cctp.command("status")
