@@ -1,6 +1,5 @@
 """Core tx module tests"""
 
-import pytest
 from defi_autopilot.core.tx import build_and_send_tx
 
 

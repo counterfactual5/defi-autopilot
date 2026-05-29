@@ -1,6 +1,5 @@
 """MoonwellClient unit tests"""
 
-import pytest
 from unittest.mock import MagicMock, patch
 from web3 import Web3
 

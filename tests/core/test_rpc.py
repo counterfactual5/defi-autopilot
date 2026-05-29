@@ -1,7 +1,7 @@
 """Core RPC module tests"""
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from defi_autopilot.core.rpc import get_w3, get_chain_config
 

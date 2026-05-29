@@ -6,9 +6,6 @@ from web3 import Web3
 from defi_autopilot.core.tokens import (
     BASE_TOKENS,
     ETH_TOKENS,
-    ARB_TOKENS,
-    OP_TOKENS,
-    POLY_TOKENS,
     CHAIN_TOKENS,
     NATIVE_ETH,
     get_token_address,
