@@ -20,6 +20,21 @@ except Exception:  # pragma: no cover - defensive
 
 GAS_MULTIPLIER = 1.1  # Gas estimation markup: 10%
 
+# Default seconds to wait for a tx receipt before timing out.
+# Overridable via the TX_RECEIPT_TIMEOUT environment variable.
+_DEFAULT_RECEIPT_TIMEOUT = 120
+
+
+def _default_receipt_timeout() -> int:
+    raw = (os.environ.get("TX_RECEIPT_TIMEOUT") or "").strip()
+    if not raw:
+        return _DEFAULT_RECEIPT_TIMEOUT
+    try:
+        val = int(raw)
+        return val if val > 0 else _DEFAULT_RECEIPT_TIMEOUT
+    except ValueError:
+        return _DEFAULT_RECEIPT_TIMEOUT
+
 
 def _chain_name(chain_id: int) -> str:
     cfg = CHAIN_PRESETS.get(chain_id)
@@ -83,7 +98,7 @@ def build_and_send_tx(
     max_priority_fee: Optional[int] = None,
     private_key: Optional[str] = None,
     wait_for_receipt: bool = True,
-    timeout: int = 120,
+    timeout: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Build, sign, send a transaction, and wait for receipt.
@@ -91,6 +106,10 @@ def build_and_send_tx(
     Args:
         data: Transaction calldata as bytes. Hex strings (0x-prefixed) are
               automatically converted to bytes.
+        timeout: Seconds to wait for the receipt. Defaults to the
+              TX_RECEIPT_TIMEOUT env var (or 120s). On timeout the tx is
+              already broadcast — a receipt_timeout audit event is logged and
+              the caller can re-query the receipt later.
     """
     # Ensure data is bytes (accept hex strings too)
     if isinstance(data, str):
@@ -100,6 +119,8 @@ def build_and_send_tx(
 
     run_id = _resolve_run_id()
     chain_name = _chain_name(chain_id)
+    if timeout is None:
+        timeout = _default_receipt_timeout()
 
     # ── policy gate (before any signing / broadcasting) ──
     _enforce_policy(chain_id, to, value, run_id)

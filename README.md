@@ -83,7 +83,15 @@ SIGNER_PRIVATE_KEY=***
 
 # Optional: 1inch API key (free tier works without it)
 INCH_API_KEY=
+
+# Optional: seconds to wait for a tx receipt before timing out (default 120).
+# On timeout the tx is already broadcast; re-query the receipt later.
+TX_RECEIPT_TIMEOUT=120
 ```
+
+RPC calls automatically retry transient failures (connection errors, HTTP 429
+rate-limits, and 5xx) up to 3 times with exponential backoff, respecting any
+`Retry-After` header.
 
 ### Usage
 
@@ -208,7 +216,7 @@ uv pip install -e ".[dev]"
 uv run pytest tests/ -v
 ```
 
-161 tests covering chain config, market params, ABI validation, client initialization, token mappings, the risk-policy gate (chokepoint + ERC-20 notional), the CCTP V1/V2 transfer state machine, the CCTP preflight doctor, the top-level chain/wallet preflight doctor, and estimateGas simulation gate.
+167 tests covering chain config, market params, ABI validation, client initialization, token mappings, the risk-policy gate (chokepoint + ERC-20 notional), the CCTP V1/V2 transfer state machine, the CCTP preflight doctor, the top-level chain/wallet preflight doctor, the estimateGas simulation gate, RPC retry/backoff, and the configurable receipt timeout.
 
 ## 🗺️ Roadmap
 

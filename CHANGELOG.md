@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.8.1] — 2026-05-29
+
+### Added
+- **RPC retry/backoff**: `get_w3` mounts a retry-capable HTTP adapter — 3
+  attempts with exponential backoff on connection errors, HTTP 429, and 5xx,
+  respecting `Retry-After`.
+- **Configurable receipt timeout**: `TX_RECEIPT_TIMEOUT` env var (default 120s)
+  overrides how long `build_and_send_tx` waits for a receipt.
+- Tests for retry policy and timeout env parsing (167 tests total).
+
+## [0.8.0] — 2026-05-29
+
+### Added
+- **estimateGas simulation gate**: a reverting tx is caught at gas estimation,
+  logged as a `simulation_failed` audit event with the revert reason, before
+  any broadcast or gas spend.
+- **Gas-balance preflight**: a zero-native-balance signer is rejected with a
+  `no_gas` audit event before estimation.
+
+## [0.7.1] — 2026-05-29
+
+### Added
+- **Top-level `defi doctor`**: preflight a chain/wallet (RPC, chainId, signer,
+  gas balance, optional policy) sharing the CCTP doctor report shape.
+
+## [0.7.0] — 2026-05-28
+
+### Added
+- **ERC-20 policy gate** (`enforce_token_policy`): `max_amount` enforced on
+  token notionals in Aave/Morpho/Compound supply/borrow.
+- **CCTP V2** client (Fast/Standard transfers) alongside V1, plus
+  `cctp doctor` preflight and richer attestation observability.
+
 ## [0.3.1] — 2026-05-27
 
 ### Added
