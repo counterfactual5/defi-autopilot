@@ -11,11 +11,9 @@ Environment:
     INCH_API_KEY  — optional, free tier works without it
 """
 
-import os
 import sys
 
 from defi_autopilot.protocols.oneinch import OneInchClient, BASE_TOKENS_INCH
-from defi_autopilot.core.rpc import get_w3
 
 
 def main():
@@ -47,14 +45,14 @@ def main():
     src_amount = float(amount) / (10**18 if src == "WETH" else 10**6)
     dst_amount = float(quote.get("toAmount", 0)) / (10**18 if dst == "WETH" else 10**6)
 
-    print(f"💱 1inch Swap Quote (Base)")
+    print("💱 1inch Swap Quote (Base)")
     print(f"   {src}: {src_amount:,.6f}")
     print(f"     → {dst}: {dst_amount:,.6f}")
     print(f"   Estimated gas: {quote.get('estimatedGas', '?')}")
     print()
 
     if "protocols" in quote:
-        print(f"   Route:")
+        print("   Route:")
         for p in quote["protocols"][0][0]:
             print(f"     {p['name']}: {p['part']:.0%} via {p.get('fromTokenAddress', '?')[:10]}")
 

@@ -8,16 +8,15 @@ Environment:
     RPC_BASE  — RPC URL for Base chain
 """
 
-import os
 import sys
 
 from web3 import Web3
-from defi_autopilot.core.rpc import get_w3, get_chain_config
+from defi_autopilot.core.rpc import get_w3
 
 
 def check_morpho(w3, chain, address):
     """Query Morpho Blue market positions."""
-    from defi_autopilot.protocols.morpho import MorphoClient, BASE_MARKETS, MorphoClient as MC
+    from defi_autopilot.protocols.morpho import MorphoClient, BASE_MARKETS
     print(f"\n  Morpho Blue ({chain['name']}):")
     try:
         client = MorphoClient(chain['chain_id'])

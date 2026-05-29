@@ -1,7 +1,6 @@
 """Core module unit tests"""
 
-import pytest
-from defi_autopilot.core.chains import CHAIN_PRESETS, ChainConfig
+from defi_autopilot.core.chains import CHAIN_PRESETS
 
 
 class TestChainPresets:
