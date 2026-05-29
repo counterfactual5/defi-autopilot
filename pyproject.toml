@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "defi-autopilot"
-version = "0.8.0"
+version = "0.8.1"
 description = "多链多协议 DeFi 自动化工具集 — 供应链借贷、Swap、质押于一体"
 readme = "README.md"
 license = "MIT"
@@ -22,6 +22,7 @@ dependencies = [
     "rich>=13.0",
     "httpx>=0.27",
     "pydantic>=2.5",
+    "requests>=2.31",
 ]
 
 [project.optional-dependencies]

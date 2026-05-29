@@ -62,6 +62,32 @@ def _mock_signer():
 _TO = "0x0000000000000000000000000000000000000001"
 
 
+class TestReceiptTimeoutConfig:
+    """TX_RECEIPT_TIMEOUT env var overrides the default receipt timeout."""
+
+    def test_default_when_unset(self):
+        from defi_autopilot.core.tx import _default_receipt_timeout
+        with patch.dict("os.environ", {}, clear=False):
+            import os
+            os.environ.pop("TX_RECEIPT_TIMEOUT", None)
+            assert _default_receipt_timeout() == 120
+
+    def test_env_override(self):
+        from defi_autopilot.core.tx import _default_receipt_timeout
+        with patch.dict("os.environ", {"TX_RECEIPT_TIMEOUT": "300"}):
+            assert _default_receipt_timeout() == 300
+
+    def test_invalid_env_falls_back(self):
+        from defi_autopilot.core.tx import _default_receipt_timeout
+        with patch.dict("os.environ", {"TX_RECEIPT_TIMEOUT": "not-a-number"}):
+            assert _default_receipt_timeout() == 120
+
+    def test_nonpositive_env_falls_back(self):
+        from defi_autopilot.core.tx import _default_receipt_timeout
+        with patch.dict("os.environ", {"TX_RECEIPT_TIMEOUT": "0"}):
+            assert _default_receipt_timeout() == 120
+
+
 class TestSimulationGate:
     """estimateGas acts as a dry-run — revert = simulation_failed."""
 
