@@ -948,6 +948,43 @@ def cctp_doctor(ctx, dest_chain, amount, wallet, v2, fast):
 # Utility Commands
 # ============================================================
 
+@cli.command("doctor")
+@click.option("--wallet", "-w", type=str, default=None, help="Wallet to check (default: signer address)")
+@click.option("--require-signer", is_flag=True, default=False, help="Fail if no signer key is available")
+@click.option("--policy", "policy_check", is_flag=True, default=False, help="Also evaluate the risk policy")
+@click.option("--policy-file", type=str, default=None, help="Explicit policy file (default: POLICY_FILE / ~/.stageforge)")
+@click.option("--amount", type=str, default=None, help="Amount (human units) for the policy gate")
+@click.pass_context
+def doctor(ctx, wallet, require_signer, policy_check, policy_file, amount):
+    """Preflight a chain/wallet: RPC, chainId, signer, gas balance, policy."""
+    from defi_autopilot import doctor as doctor_mod
+
+    chain_id = ctx.obj["chain_id"]
+    report = doctor_mod.run_doctor(
+        chain_id,
+        wallet=wallet,
+        require_signer=require_signer,
+        policy_check=policy_check,
+        policy_file=policy_file,
+        amount=amount,
+    )
+
+    table = Table(title=f"Doctor — chain {chain_id}")
+    table.add_column("Check", style="cyan")
+    table.add_column("Status", style="green")
+    table.add_column("Detail", style="yellow")
+    for check in report["checks"]:
+        status = "[green]PASS[/green]" if check["ok"] else "[red]FAIL[/red]"
+        table.add_row(check["name"], status, check["detail"])
+    console.print(table)
+
+    if report["ok"]:
+        console.print("[green]All checks passed — chain/wallet ready.[/green]")
+    else:
+        console.print("[red]One or more checks failed — fix before transacting.[/red]")
+        sys.exit(1)
+
+
 @cli.command("markets")
 @click.pass_context
 def list_markets(ctx):
