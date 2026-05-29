@@ -135,6 +135,12 @@ defi -c 8453 cctp transfer --v2 --fast --to 42161 --amount 10000000 --run-id fas
 # CCTP V2 — Standard Transfer (hard finality, usually fee-free)
 defi -c 8453 cctp transfer --v2 --standard --to 42161 --amount 10000000 --run-id std-1
 
+# --- Preflight doctor (no transactions sent) ---
+defi -c 8453 doctor                       # RPC, chainId, signer, gas balance
+defi -c 8453 doctor --policy --amount 1000 # also evaluate the risk policy
+defi -c 8453 cctp doctor --to 42161 --amount 10000000        # CCTP V1 route
+defi -c 8453 cctp doctor --v2 --fast --to 42161 --amount 10000000  # + fee quote
+
 # --- General ---
 defi -c 1 morpho position --market ...  # specify chain
 defi --dry-run morpho supply ...         # simulate only
