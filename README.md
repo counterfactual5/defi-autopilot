@@ -208,7 +208,7 @@ uv pip install -e ".[dev]"
 uv run pytest tests/ -v
 ```
 
-158 tests covering chain config, market params, ABI validation, client initialization, token mappings, the risk-policy gate (chokepoint + ERC-20 notional), the CCTP V1/V2 transfer state machine, the CCTP preflight doctor, and the top-level chain/wallet preflight doctor.
+161 tests covering chain config, market params, ABI validation, client initialization, token mappings, the risk-policy gate (chokepoint + ERC-20 notional), the CCTP V1/V2 transfer state machine, the CCTP preflight doctor, the top-level chain/wallet preflight doctor, and estimateGas simulation gate.
 
 ## 🗺️ Roadmap
 
