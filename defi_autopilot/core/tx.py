@@ -108,10 +108,27 @@ def build_and_send_tx(
     signer = get_signer(private_key)
     address = Web3.to_checksum_address(signer.address)
 
+    # Preflight: ensure the wallet has gas for at least one tx.
+    balance = w3.eth.get_balance(address)
+    if balance == 0:
+        _audit.log_event(
+            event=_audit.EVENT_ERROR,
+            chain=chain_name,
+            wallet=address,
+            run_id=run_id,
+            error_code="no_gas",
+            details={"native_balance": 0},
+        )
+        raise RuntimeError(
+            f"Wallet {address} has zero {CHAIN_PRESETS.get(chain_id) and CHAIN_PRESETS[chain_id].native_token or 'ETH'} "
+            f"on chain {chain_id} — cannot pay for gas."
+        )
+
     # Get nonce
     nonce = w3.eth.get_transaction_count(address)
 
-    # Estimate gas
+    # Estimate gas — also acts as a dry-run simulation.
+    # If the call would revert, we learn here *before* spending gas.
     if gas_limit is None:
         try:
             estimated = w3.eth.estimate_gas({
@@ -121,8 +138,18 @@ def build_and_send_tx(
                 "value": value,
             })
             gas_limit = int(estimated * GAS_MULTIPLIER)
-        except Exception as e:
-            raise RuntimeError(f"Gas estimation failed: {e}")
+        except Exception as exc:
+            reason = getattr(exc, "args", [str(exc)])
+            reason_str = reason[0] if reason else str(exc)
+            _audit.log_event(
+                event=_audit.EVENT_ERROR,
+                chain=chain_name,
+                wallet=address,
+                run_id=run_id,
+                error_code="simulation_failed",
+                details={"to": to, "value": str(value), "revert": str(reason_str)},
+            )
+            raise RuntimeError(f"Gas estimation failed (tx would revert): {reason_str}") from exc
 
     # Get EIP-1559 fees
     if max_fee_per_gas is None:
