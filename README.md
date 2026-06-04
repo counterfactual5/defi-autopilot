@@ -29,7 +29,8 @@ defi-autopilot/
 │   │   ├── lido/          # Lido (liquid staking)
 │   │   ├── compound/      # Compound V3 (lending)
 │   │   ├── curve/         # Curve Finance (DEX)
-│   │   └── cctp/          # Circle CCTP — V1 + V2 (cross-chain USDC, resumable)
+│   │   ├── cctp/          # Circle CCTP — V1 + V2 (cross-chain USDC, resumable)
+│   │   └── debridge/      # deBridge DLN (arbitrary-token cross-chain swaps)
 │   └── cli.py             # Click CLI entry point
 └── tests/
 ```
@@ -47,6 +48,7 @@ defi-autopilot/
 | **Compound V3** | Lending | Ethereum, Base, Arbitrum, Polygon | supply, withdraw, supplyCollateral, borrow, repay |
 | **Curve** | Stablecoin DEX | Ethereum, Base, Arbitrum, Optimism | swap, add/remove liquidity, quote |
 | **Circle CCTP** | Cross-chain USDC bridge | Ethereum, Optimism, Arbitrum, Base, Polygon, Unichain, Avalanche | transfer (burn→attest→mint), resumable; **V1** (default) + **V2** (Fast/Standard) |
+| **deBridge DLN** | Cross-chain swap (any token) | Ethereum, Base, Arbitrum, Optimism, Polygon, Avalanche, Unichain | quote, send (cross-chain order via DLN REST API) |
 
 ## Quick Start
 
