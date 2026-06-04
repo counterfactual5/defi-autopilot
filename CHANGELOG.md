@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.8.3] — 2026-06-05
+## [0.9.0] — 2026-06-05
 
 ### Added
 - **deBridge DLN**: cross-chain swaps for arbitrary tokens via REST quote + order
