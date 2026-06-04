@@ -519,6 +519,60 @@ def inch_swap(ctx, src, dst, amount, slippage):
 
 
 # ============================================================
+# deBridge Commands (arbitrary-token cross-chain swaps)
+# ============================================================
+
+@cli.group()
+def debridge():
+    """deBridge DLN cross-chain swaps (any token, src chain = --chain)"""
+    pass
+
+
+@debridge.command("quote")
+@click.option("--src", "-s", required=True, help="Source token (symbol or address)")
+@click.option("--dst", "-d", required=True, help="Destination token (symbol or address)")
+@click.option("--amount", "-n", required=True, type=int, help="Source amount in wei")
+@click.option("--dst-chain", required=True, type=int, help="Destination chain id")
+@click.pass_context
+def debridge_quote(ctx, src, dst, amount, dst_chain):
+    """Estimate a cross-chain swap (read-only)."""
+    from defi_autopilot.protocols.debridge import DeBridgeClient
+    from defi_autopilot.protocols.oneinch import BASE_TOKENS_INCH
+
+    src_chain = ctx.obj["chain_id"]
+    src_addr = BASE_TOKENS_INCH.get(src.upper(), src)
+    dst_addr = BASE_TOKENS_INCH.get(dst.upper(), dst)
+
+    client = DeBridgeClient(src_chain, dst_chain)
+    quote = client.get_quote(src_addr, dst_addr, amount)
+    est = quote.get("estimation", {})
+    out = (est.get("dstChainTokenOut") or {}).get("amount", "N/A")
+    console.print(f"[green]Est. output:[/green] {out}")
+    console.print(f"  {src_chain}:{src_addr} -> {dst_chain}:{dst_addr}")
+
+
+@debridge.command("send")
+@click.option("--src", "-s", required=True, help="Source token (symbol or address)")
+@click.option("--dst", "-d", required=True, help="Destination token (symbol or address)")
+@click.option("--amount", "-n", required=True, type=int, help="Source amount in wei")
+@click.option("--dst-chain", required=True, type=int, help="Destination chain id")
+@click.option("--recipient", default=None, help="Destination recipient (defaults to signer)")
+@click.pass_context
+def debridge_send(ctx, src, dst, amount, dst_chain, recipient):
+    """Create and broadcast a DLN cross-chain order."""
+    from defi_autopilot.protocols.debridge import DeBridgeClient
+    from defi_autopilot.protocols.oneinch import BASE_TOKENS_INCH
+
+    src_chain = ctx.obj["chain_id"]
+    src_addr = BASE_TOKENS_INCH.get(src.upper(), src)
+    dst_addr = BASE_TOKENS_INCH.get(dst.upper(), dst)
+
+    client = DeBridgeClient(src_chain, dst_chain)
+    result = client.create_order(src_addr, dst_addr, amount, recipient=recipient)
+    _print_tx_result(result.get("tx", result))
+
+
+# ============================================================
 # Lido Commands
 # ============================================================
 
